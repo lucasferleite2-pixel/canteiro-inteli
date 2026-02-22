@@ -8,13 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardList, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Users, Calendar, Loader2, Lock, Pencil, Trash2 } from "lucide-react";
+import { Plus, ClipboardList, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Users, Calendar, Loader2, Lock, Pencil, Trash2, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAIAnalysis } from "@/hooks/useAIAnalysis";
+import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -50,6 +52,7 @@ export default function DiarioObra() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [form, setForm] = useState(emptyForm);
+  const ai = useAIAnalysis();
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects", companyId],
@@ -162,6 +165,15 @@ export default function DiarioObra() {
 
   const canModify = (entry: any) => !entry.is_locked && entry.author_id === user?.id;
 
+  const handleAISummary = () => {
+    if (entries.length === 0) {
+      toast({ variant: "destructive", title: "Sem registros", description: "Adicione registros antes de gerar o resumo." });
+      return;
+    }
+    const projectName = projects.find((p) => p.id === selectedProject)?.name || "Obra";
+    ai.analyze("diary_summary", { projectName, entries });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -169,74 +181,82 @@ export default function DiarioObra() {
           <h1 className="text-2xl font-bold tracking-tight">Diário de Obra</h1>
           <p className="text-muted-foreground">Registros diários de atividades, equipe, clima e ocorrências.</p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else setOpen(true); }}>
-          <DialogTrigger asChild>
-            <Button disabled={!selectedProject}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Registro
+        <div className="flex items-center gap-2">
+          {selectedProject && entries.length > 0 && (
+            <Button variant="outline" onClick={handleAISummary} disabled={ai.isLoading}>
+              {ai.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              Resumo IA
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Editar Registro" : "Novo Registro Diário"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Obra</Label>
-                <Input value={projects.find((p) => p.id === selectedProject)?.name || ""} disabled />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Data *</Label>
-                  <Input type="date" value={form.entry_date} onChange={(e) => setForm({ ...form, entry_date: e.target.value })} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Clima</Label>
-                  <Select value={form.weather} onValueChange={(v) => setForm({ ...form, weather: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {weatherOptions.map((w) => (
-                        <SelectItem key={w.value} value={w.value}>
-                          <span className="flex items-center gap-2"><w.icon className="h-4 w-4" /> {w.label}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Equipe em campo (nº de pessoas)</Label>
-                <Input type="number" min="0" value={form.team_count} onChange={(e) => setForm({ ...form, team_count: e.target.value })} placeholder="0" />
-              </div>
-              <div className="space-y-2">
-                <Label>Atividades Realizadas</Label>
-                <Textarea rows={3} value={form.activities} onChange={(e) => setForm({ ...form, activities: e.target.value })} placeholder="Descreva as atividades do dia..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Ocorrências</Label>
-                <Textarea rows={2} value={form.occurrences} onChange={(e) => setForm({ ...form, occurrences: e.target.value })} placeholder="Incidentes, atrasos, problemas..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Materiais Utilizados</Label>
-                <Textarea rows={2} value={form.materials} onChange={(e) => setForm({ ...form, materials: e.target.value })} placeholder="Materiais recebidos ou consumidos..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Comentários Técnicos</Label>
-                <Textarea rows={2} value={form.technical_comments} onChange={(e) => setForm({ ...form, technical_comments: e.target.value })} placeholder="Observações técnicas relevantes..." />
-              </div>
-              <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
-                {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingId ? "Salvar Alterações" : "Salvar Registro"}
+          )}
+          <Dialog open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else setOpen(true); }}>
+            <DialogTrigger asChild>
+              <Button disabled={!selectedProject}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Registro
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingId ? "Editar Registro" : "Novo Registro Diário"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Obra</Label>
+                  <Input value={projects.find((p) => p.id === selectedProject)?.name || ""} disabled />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Data *</Label>
+                    <Input type="date" value={form.entry_date} onChange={(e) => setForm({ ...form, entry_date: e.target.value })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Clima</Label>
+                    <Select value={form.weather} onValueChange={(v) => setForm({ ...form, weather: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {weatherOptions.map((w) => (
+                          <SelectItem key={w.value} value={w.value}>
+                            <span className="flex items-center gap-2"><w.icon className="h-4 w-4" /> {w.label}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Equipe em campo (nº de pessoas)</Label>
+                  <Input type="number" min="0" value={form.team_count} onChange={(e) => setForm({ ...form, team_count: e.target.value })} placeholder="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Atividades Realizadas</Label>
+                  <Textarea rows={3} value={form.activities} onChange={(e) => setForm({ ...form, activities: e.target.value })} placeholder="Descreva as atividades do dia..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ocorrências</Label>
+                  <Textarea rows={2} value={form.occurrences} onChange={(e) => setForm({ ...form, occurrences: e.target.value })} placeholder="Incidentes, atrasos, problemas..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Materiais Utilizados</Label>
+                  <Textarea rows={2} value={form.materials} onChange={(e) => setForm({ ...form, materials: e.target.value })} placeholder="Materiais recebidos ou consumidos..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Comentários Técnicos</Label>
+                  <Textarea rows={2} value={form.technical_comments} onChange={(e) => setForm({ ...form, technical_comments: e.target.value })} placeholder="Observações técnicas relevantes..." />
+                </div>
+                <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingId ? "Salvar Alterações" : "Salvar Registro"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Project filter */}
       <div className="flex items-center gap-3">
         <Label className="text-sm font-medium">Obra:</Label>
-        <Select value={selectedProject} onValueChange={setSelectedProject}>
+        <Select value={selectedProject} onValueChange={(v) => { setSelectedProject(v); ai.clear(); }}>
           <SelectTrigger className="w-72"><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
           <SelectContent>
             {projects.map((p) => (
@@ -245,6 +265,9 @@ export default function DiarioObra() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* AI Analysis Panel */}
+      <AIAnalysisPanel title="Resumo Inteligente do Diário" result={ai.result} isLoading={ai.isLoading} onClose={ai.clear} />
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
