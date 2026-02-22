@@ -20,6 +20,22 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function ProtectedAppLayout() {
+  return (
+    <ProtectedRoute>
+      <AppLayout />
+    </ProtectedRoute>
+  );
+}
+
+function ProtectedCompanySetup() {
+  return (
+    <ProtectedRoute>
+      <CompanySetup />
+    </ProtectedRoute>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -29,13 +45,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
+            <Route path="/empresa" element={<ProtectedCompanySetup />} />
+            <Route element={<ProtectedAppLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/obras" element={<Obras />} />
               <Route path="/diario" element={<DiarioObra />} />
@@ -44,7 +55,6 @@ const App = () => (
               <Route path="/licitacoes" element={<Licitacoes />} />
               <Route path="/alertas" element={<Alertas />} />
               <Route path="/usuarios" element={<Usuarios />} />
-              <Route path="/empresa" element={<CompanySetup />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
