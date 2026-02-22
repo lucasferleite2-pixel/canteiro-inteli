@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -44,6 +45,8 @@ const systemItems = [
 export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { profile } = useAuth();
+
   const isActive = (path: string) =>
     path === "/" ? currentPath === "/" : currentPath.startsWith(path);
 
@@ -96,9 +99,14 @@ export function AppSidebar() {
         {renderGroup("Sistema", systemItems)}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border p-3">
-        <p className="text-[10px] text-muted-foreground text-center">
-          v1.0 — Obra Inteligente
-        </p>
+        <div className="text-center">
+          <p className="text-xs font-medium text-sidebar-foreground truncate">
+            {profile?.full_name || "Usuário"}
+          </p>
+          <p className="text-[10px] text-muted-foreground truncate">
+            {profile?.email || ""}
+          </p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
