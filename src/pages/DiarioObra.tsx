@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardList, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Users, Calendar, Loader2, Lock } from "lucide-react";
+import { Plus, ClipboardList, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Users, Calendar, Loader2, Lock, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,21 +31,25 @@ const weatherIcon = (weather: string | null) => {
   return <Icon className="h-4 w-4" />;
 };
 
+const emptyForm = {
+  entry_date: new Date().toISOString().split("T")[0],
+  weather: "",
+  team_count: "",
+  activities: "",
+  occurrences: "",
+  materials: "",
+  technical_comments: "",
+};
+
 export default function DiarioObra() {
   const { companyId, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("");
-  const [form, setForm] = useState({
-    entry_date: new Date().toISOString().split("T")[0],
-    weather: "",
-    team_count: "",
-    activities: "",
-    occurrences: "",
-    materials: "",
-    technical_comments: "",
-  });
+  const [form, setForm] = useState(emptyForm);
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects", companyId],
@@ -80,14 +85,17 @@ export default function DiarioObra() {
     enabled: !!companyId,
   });
 
-  const createMutation = useMutation({
+  const resetAndClose = () => {
+    setOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  const saveMutation = useMutation({
     mutationFn: async () => {
       if (!companyId || !user) throw new Error("Sem empresa ou usuário");
       if (!selectedProject) throw new Error("Selecione uma obra");
-      const { error } = await supabase.from("diary_entries").insert({
-        company_id: companyId,
-        project_id: selectedProject,
-        author_id: user.id,
+      const payload = {
         entry_date: form.entry_date,
         weather: form.weather || null,
         team_count: form.team_count ? parseInt(form.team_count) : 0,
@@ -95,17 +103,54 @@ export default function DiarioObra() {
         occurrences: form.occurrences || null,
         materials: form.materials || null,
         technical_comments: form.technical_comments || null,
-      });
+      };
+      if (editingId) {
+        const { error } = await supabase.from("diary_entries").update(payload).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("diary_entries").insert({
+          ...payload,
+          company_id: companyId,
+          project_id: selectedProject,
+          author_id: user.id,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["diary_entries"] });
+      resetAndClose();
+      toast({ title: editingId ? "Registro atualizado!" : "Registro criado com sucesso!" });
+    },
+    onError: (err: any) => toast({ variant: "destructive", title: "Erro", description: err.message }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("diary_entries").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diary_entries"] });
-      setOpen(false);
-      setForm({ entry_date: new Date().toISOString().split("T")[0], weather: "", team_count: "", activities: "", occurrences: "", materials: "", technical_comments: "" });
-      toast({ title: "Registro criado com sucesso!" });
+      setDeleteId(null);
+      toast({ title: "Registro excluído com sucesso!" });
     },
     onError: (err: any) => toast({ variant: "destructive", title: "Erro", description: err.message }),
   });
+
+  const openEdit = (entry: any) => {
+    setEditingId(entry.id);
+    setForm({
+      entry_date: entry.entry_date,
+      weather: entry.weather || "",
+      team_count: entry.team_count?.toString() || "",
+      activities: entry.activities || "",
+      occurrences: entry.occurrences || "",
+      materials: entry.materials || "",
+      technical_comments: entry.technical_comments || "",
+    });
+    setOpen(true);
+  };
 
   const formatDate = (d: string) => {
     try {
@@ -115,6 +160,8 @@ export default function DiarioObra() {
     }
   };
 
+  const canModify = (entry: any) => !entry.is_locked && entry.author_id === user?.id;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -122,7 +169,7 @@ export default function DiarioObra() {
           <h1 className="text-2xl font-bold tracking-tight">Diário de Obra</h1>
           <p className="text-muted-foreground">Registros diários de atividades, equipe, clima e ocorrências.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else setOpen(true); }}>
           <DialogTrigger asChild>
             <Button disabled={!selectedProject}>
               <Plus className="mr-2 h-4 w-4" />
@@ -130,8 +177,10 @@ export default function DiarioObra() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Novo Registro Diário</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>{editingId ? "Editar Registro" : "Novo Registro Diário"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
               <div className="space-y-2">
                 <Label>Obra</Label>
                 <Input value={projects.find((p) => p.id === selectedProject)?.name || ""} disabled />
@@ -148,9 +197,7 @@ export default function DiarioObra() {
                     <SelectContent>
                       {weatherOptions.map((w) => (
                         <SelectItem key={w.value} value={w.value}>
-                          <span className="flex items-center gap-2">
-                            <w.icon className="h-4 w-4" /> {w.label}
-                          </span>
+                          <span className="flex items-center gap-2"><w.icon className="h-4 w-4" /> {w.label}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -177,9 +224,9 @@ export default function DiarioObra() {
                 <Label>Comentários Técnicos</Label>
                 <Textarea rows={2} value={form.technical_comments} onChange={(e) => setForm({ ...form, technical_comments: e.target.value })} placeholder="Observações técnicas relevantes..." />
               </div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Registro
+              <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
+                {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingId ? "Salvar Alterações" : "Salvar Registro"}
               </Button>
             </form>
           </DialogContent>
@@ -190,9 +237,7 @@ export default function DiarioObra() {
       <div className="flex items-center gap-3">
         <Label className="text-sm font-medium">Obra:</Label>
         <Select value={selectedProject} onValueChange={setSelectedProject}>
-          <SelectTrigger className="w-72">
-            <SelectValue placeholder="Selecione uma obra" />
-          </SelectTrigger>
+          <SelectTrigger className="w-72"><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
           <SelectContent>
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -200,6 +245,26 @@ export default function DiarioObra() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir registro?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. O registro será removido permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+            >
+              {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Entries list */}
       {!selectedProject ? (
@@ -245,6 +310,16 @@ export default function DiarioObra() {
                       <Badge variant="secondary" className="gap-1">
                         <Users className="h-3 w-3" /> {entry.team_count}
                       </Badge>
+                    )}
+                    {canModify(entry) && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(entry)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(entry.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
