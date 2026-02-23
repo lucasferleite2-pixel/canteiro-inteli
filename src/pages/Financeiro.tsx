@@ -10,13 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer } from "recharts";
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Trash2 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Trash2, FileDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type FinancialRecord = {
   id: string;
@@ -167,6 +169,101 @@ export default function Financeiro() {
       .map(([month, v]) => ({ month, receitas: v.receitas, despesas: v.despesas, saldo: v.receitas - v.despesas }));
   }, [filtered]);
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const now = format(new Date(), "dd/MM/yyyy HH:mm");
+    const projectName = filterProject === "all"
+      ? "Todas as obras"
+      : projects.find((p) => p.id === filterProject)?.name ?? "";
+
+    // Header
+    doc.setFontSize(18);
+    doc.text("Relatório Financeiro", 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${now}`, 14, 28);
+    doc.text(`Filtro: ${projectName}`, 14, 34);
+
+    // Summary
+    doc.setFontSize(13);
+    doc.text("Resumo", 14, 46);
+    autoTable(doc, {
+      startY: 50,
+      head: [["Indicador", "Valor"]],
+      body: [
+        ["Receitas", currencyFmt(totalReceitas)],
+        ["Despesas", currencyFmt(totalDespesas)],
+        ["A Pagar", currencyFmt(aPagar)],
+        ["Saldo Pago", currencyFmt(totalPago)],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    // Budget vs Actual table
+    const y1 = (doc as any).lastAutoTable?.finalY ?? 80;
+    if (budgetVsActual.length > 0) {
+      doc.setFontSize(13);
+      doc.text("Orçado vs Realizado", 14, y1 + 12);
+      autoTable(doc, {
+        startY: y1 + 16,
+        head: [["Obra", "Orçamento", "Realizado", "Diferença"]],
+        body: budgetVsActual.map((r) => [
+          r.name,
+          currencyFmt(r.orcamento),
+          currencyFmt(r.realizado),
+          currencyFmt(r.orcamento - r.realizado),
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+
+    // Cash flow table
+    const y2 = (doc as any).lastAutoTable?.finalY ?? y1 + 20;
+    if (cashFlow.length > 0) {
+      doc.setFontSize(13);
+      doc.text("Fluxo de Caixa", 14, y2 + 12);
+      autoTable(doc, {
+        startY: y2 + 16,
+        head: [["Mês", "Receitas", "Despesas", "Saldo"]],
+        body: cashFlow.map((r) => [
+          r.month,
+          currencyFmt(r.receitas),
+          currencyFmt(r.despesas),
+          currencyFmt(r.saldo),
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+    }
+
+    // Records table
+    const y3 = (doc as any).lastAutoTable?.finalY ?? y2 + 20;
+    if (filtered.length > 0) {
+      doc.addPage();
+      doc.setFontSize(13);
+      doc.text("Lançamentos", 14, 20);
+      autoTable(doc, {
+        startY: 24,
+        head: [["Descrição", "Tipo", "Categoria", "Valor", "Vencimento", "Status"]],
+        body: filtered.map((r) => [
+          r.description,
+          r.type === "income" ? "Receita" : "Despesa",
+          r.category || "—",
+          currencyFmt(r.amount),
+          r.due_date ? format(new Date(r.due_date), "dd/MM/yyyy") : "—",
+          r.paid_at ? "Pago" : "Pendente",
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 8 },
+      });
+    }
+
+    doc.save(`relatorio-financeiro-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    toast.success("PDF exportado com sucesso!");
+  };
+
   const stats = [
     { label: "Receitas", value: currencyFmt(totalReceitas), icon: TrendingUp, color: "text-emerald-500" },
     { label: "Despesas", value: currencyFmt(totalDespesas), icon: TrendingDown, color: "text-destructive" },
@@ -204,6 +301,9 @@ export default function Financeiro() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={exportPDF}>
+            <FileDown className="h-4 w-4 mr-2" /> Exportar PDF
+          </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" /> Lançamento</Button>
