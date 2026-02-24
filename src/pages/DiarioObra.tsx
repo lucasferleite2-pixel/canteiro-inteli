@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardList, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Users, Calendar, Loader2, Lock, Pencil, Trash2, Sparkles, FileDown } from "lucide-react";
+import { Plus, ClipboardList, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Users, Calendar, Loader2, Lock, Pencil, Trash2, Sparkles, FileDown, ImageIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { DiaryPhotoUpload } from "@/components/diary/DiaryPhotoUpload";
+import { DiaryPhotoGallery } from "@/components/diary/DiaryPhotoGallery";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -54,6 +56,7 @@ export default function DiarioObra() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [form, setForm] = useState(emptyForm);
+  const [showUploadFor, setShowUploadFor] = useState<string | null>(null);
   const ai = useAIAnalysis();
 
   const { data: projects = [] } = useQuery({
@@ -65,6 +68,19 @@ export default function DiarioObra() {
         .select("id, name, status")
         .eq("company_id", companyId)
         .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId,
+  });
+
+  const { data: contracts = [] } = useQuery({
+    queryKey: ["contracts", companyId, selectedProject],
+    queryFn: async () => {
+      if (!companyId) return [];
+      let q = supabase.from("contracts").select("id, name").eq("company_id", companyId);
+      if (selectedProject) q = q.eq("project_id", selectedProject);
+      const { data, error } = await q.order("name");
       if (error) throw error;
       return data;
     },
@@ -411,6 +427,9 @@ export default function DiarioObra() {
                     )}
                     {canModify(entry) && (
                       <>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowUploadFor(showUploadFor === entry.id ? null : entry.id)}>
+                          <ImageIcon className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(entry)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -447,6 +466,20 @@ export default function DiarioObra() {
                     <p className="whitespace-pre-line">{entry.technical_comments}</p>
                   </div>
                 )}
+                {/* Photo upload panel */}
+                {showUploadFor === entry.id && companyId && (
+                  <div className="pt-2 border-t">
+                    <DiaryPhotoUpload
+                      entryId={entry.id}
+                      projectId={entry.project_id}
+                      companyId={companyId}
+                      contracts={contracts}
+                      onComplete={() => setShowUploadFor(null)}
+                    />
+                  </div>
+                )}
+                {/* Photo gallery */}
+                {companyId && <DiaryPhotoGallery entryId={entry.id} companyId={companyId} />}
               </CardContent>
             </Card>
           ))}
