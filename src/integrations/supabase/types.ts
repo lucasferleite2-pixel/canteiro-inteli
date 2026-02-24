@@ -293,6 +293,92 @@ export type Database = {
           },
         ]
       }
+      diary_photos: {
+        Row: {
+          activity: string | null
+          captured_at: string | null
+          company_id: string
+          contract_id: string | null
+          created_at: string
+          description: string | null
+          diary_entry_id: string
+          file_name: string
+          file_size: number | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          mime_type: string | null
+          project_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          activity?: string | null
+          captured_at?: string | null
+          company_id: string
+          contract_id?: string | null
+          created_at?: string
+          description?: string | null
+          diary_entry_id: string
+          file_name: string
+          file_size?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          mime_type?: string | null
+          project_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          activity?: string | null
+          captured_at?: string | null
+          company_id?: string
+          contract_id?: string | null
+          created_at?: string
+          description?: string | null
+          diary_entry_id?: string
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          mime_type?: string | null
+          project_id?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diary_photos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diary_photos_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diary_photos_diary_entry_id_fkey"
+            columns: ["diary_entry_id"]
+            isOneToOne: false
+            referencedRelation: "diary_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diary_photos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_records: {
         Row: {
           amount: number
