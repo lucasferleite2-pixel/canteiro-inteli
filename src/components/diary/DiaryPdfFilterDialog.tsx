@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -6,10 +6,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, FileDown, Loader2 } from "lucide-react";
+import { CalendarIcon, FileDown, Loader2, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 export interface PdfFilters {
   dateFrom: Date | undefined;
@@ -21,6 +24,8 @@ export interface PdfFilters {
   includeOccurrences: boolean;
   includeMaterials: boolean;
   includeTechnicalComments: boolean;
+  includeLogo: boolean;
+  logoBase64: string | null;
 }
 
 interface Props {
@@ -73,6 +78,12 @@ function getDateRange(type: string): { from: Date; to: Date } {
 }
 
 export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate, isLoading, progress }: Props) {
+  const { companyId } = useAuth();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+
   const [filters, setFilters] = useState<PdfFilters>({
     dateFrom: undefined,
     dateTo: undefined,
@@ -83,7 +94,65 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
     includeOccurrences: true,
     includeMaterials: true,
     includeTechnicalComments: true,
+    includeLogo: true,
+    logoBase64: null,
   });
+
+  // Load existing logo on open
+  const loadExistingLogo = async () => {
+    if (!companyId) return;
+    const { data: company } = await supabase.from("companies").select("logo_url").eq("id", companyId).maybeSingle();
+    if (company?.logo_url) {
+      setLogoPreview(company.logo_url);
+      // Pre-load as base64
+      try {
+        const res = await fetch(company.logo_url);
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const b64 = reader.result as string;
+          setFilters((f) => ({ ...f, logoBase64: b64, includeLogo: true }));
+        };
+        reader.readAsDataURL(blob);
+      } catch { /* ignore */ }
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !companyId) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ variant: "destructive", title: "Formato inválido", description: "Envie uma imagem (PNG, JPG, SVG)." });
+      return;
+    }
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${companyId}/logo.${ext}`;
+      await supabase.storage.from("company-logos").upload(path, file, { upsert: true });
+      const { data: urlData } = supabase.storage.from("company-logos").getPublicUrl(path);
+      const logoUrl = urlData.publicUrl + "?t=" + Date.now();
+      await supabase.from("companies").update({ logo_url: logoUrl }).eq("id", companyId);
+      setLogoPreview(logoUrl);
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilters((f) => ({ ...f, logoBase64: reader.result as string, includeLogo: true }));
+      };
+      reader.readAsDataURL(file);
+      toast({ title: "Logo enviado com sucesso!" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro ao enviar logo", description: err.message });
+    } finally {
+      setLogoUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoPreview(null);
+    setFilters((f) => ({ ...f, logoBase64: null, includeLogo: false }));
+  };
 
   const handleReportTypeChange = (type: string) => {
     if (type !== "custom") {
@@ -96,8 +165,14 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
 
   const update = (partial: Partial<PdfFilters>) => setFilters((f) => ({ ...f, ...partial }));
 
+  // Load logo when dialog opens
+  const handleOpenChange = (v: boolean) => {
+    if (v) loadExistingLogo();
+    onOpenChange(v);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configurar Relatório PDF</DialogTitle>
@@ -144,6 +219,39 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
               </Select>
             </div>
           )}
+
+          {/* Company logo */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Logotipo da Empresa</Label>
+            <div className="flex items-center gap-3">
+              {logoPreview ? (
+                <div className="relative">
+                  <img src={logoPreview} alt="Logo" className="h-12 w-auto max-w-[120px] object-contain rounded border p-1" />
+                  <button
+                    type="button"
+                    onClick={removeLogo}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={logoUploading}
+              >
+                {logoUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                {logoPreview ? "Trocar Logo" : "Enviar Logo"}
+              </Button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+            </div>
+            {logoPreview && (
+              <ToggleRow label="Incluir logo na capa" checked={filters.includeLogo} onChange={(v) => update({ includeLogo: v })} />
+            )}
+          </div>
 
           {/* Content toggles */}
           <div className="space-y-3">

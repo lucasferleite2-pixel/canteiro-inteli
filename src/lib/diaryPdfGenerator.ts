@@ -57,6 +57,7 @@ interface PdfOptions {
   includePhotos?: boolean;
   aiSummary?: string | null;
   contentFilters?: PdfContentFilters;
+  logoBase64?: string | null;
 }
 
 // ── Helpers ──
@@ -126,7 +127,7 @@ export async function generateDiaryPDF(
   companyId: string,
   onProgress?: (step: string) => void
 ): Promise<void> {
-  const { projectName, companyName, entries, userName, includePhotos = true, aiSummary, contentFilters } = options;
+  const { projectName, companyName, entries, userName, includePhotos = true, aiSummary, contentFilters, logoBase64 } = options;
   const showActivities = contentFilters?.includeActivities ?? true;
   const showOccurrences = contentFilters?.includeOccurrences ?? true;
   const showMaterials = contentFilters?.includeMaterials ?? true;
@@ -172,6 +173,19 @@ export async function generateDiaryPDF(
   doc.setFillColor(BLUE[0], BLUE[1], BLUE[2]);
   doc.rect(0, 0, pageW, 8, "F");
   doc.rect(0, pageH - 8, pageW, 8, "F");
+
+  // Company logo
+  let titleStartY = 50;
+  if (logoBase64) {
+    try {
+      const logoW = 50;
+      const logoH = 25;
+      doc.addImage(logoBase64, "PNG", (pageW - logoW) / 2, 16, logoW, logoH);
+      titleStartY = 50;
+    } catch {
+      // skip if logo fails
+    }
+  }
 
   // Title
   doc.setFontSize(28);
