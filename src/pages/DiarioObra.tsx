@@ -234,9 +234,20 @@ export default function DiarioObra() {
         reportTypeLabel: reportTypeLabels[filters.reportType] || "Personalizado",
       };
 
+      // Save company details if changed
+      await supabase.from("companies").update({
+        address: filters.companyAddress || null,
+        phone: filters.companyPhone || null,
+        technical_responsible: filters.technicalResponsible || null,
+      } as any).eq("id", companyId!);
+
       await generateDiaryPDF(
         {
           projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
+          companyName: filters.companyName || undefined,
+          companyAddress: filters.companyAddress || undefined,
+          companyPhone: filters.companyPhone || undefined,
+          technicalResponsible: filters.technicalResponsible || undefined,
           entries: filtered,
           userName: user?.email || undefined,
           includePhotos: filters.includePhotos,
