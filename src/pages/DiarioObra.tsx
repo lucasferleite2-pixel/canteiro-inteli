@@ -239,6 +239,7 @@ export default function DiarioObra() {
         address: filters.companyAddress || null,
         phone: filters.companyPhone || null,
         technical_responsible: filters.technicalResponsible || null,
+        brand_color: filters.brandColor || null,
       } as any).eq("id", companyId!);
 
       await generateDiaryPDF(
@@ -254,6 +255,7 @@ export default function DiarioObra() {
           aiSummary: ai.result || null,
           contentFilters,
           logoBase64: filters.includeLogo ? filters.logoBase64 : null,
+          brandColor: filters.brandColor,
         },
         companyId!,
         (step) => setPdfProgress(step)

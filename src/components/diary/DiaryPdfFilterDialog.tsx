@@ -31,6 +31,7 @@ export interface PdfFilters {
   companyAddress: string;
   companyPhone: string;
   technicalResponsible: string;
+  brandColor: string;
 }
 
 interface Props {
@@ -105,13 +106,14 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
     companyAddress: "",
     companyPhone: "",
     technicalResponsible: "",
+    brandColor: "#1E40AF",
   });
 
   const loadCompanyData = async () => {
     if (!companyId) return;
     const { data: company } = await supabase
       .from("companies")
-      .select("logo_url, name, address, phone, technical_responsible")
+      .select("logo_url, name, address, phone, technical_responsible, brand_color")
       .eq("id", companyId)
       .maybeSingle();
     if (!company) return;
@@ -121,6 +123,7 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
       companyAddress: (company as any).address || "",
       companyPhone: (company as any).phone || "",
       technicalResponsible: (company as any).technical_responsible || "",
+      brandColor: (company as any).brand_color || "#1E40AF",
     }));
     if (company.logo_url) {
       setLogoPreview(company.logo_url);
@@ -246,6 +249,27 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
               <Input placeholder="Endereço" value={filters.companyAddress} onChange={(e) => update({ companyAddress: e.target.value })} />
               <Input placeholder="Telefone" value={filters.companyPhone} onChange={(e) => update({ companyPhone: e.target.value })} />
               <Input placeholder="Responsável Técnico" value={filters.technicalResponsible} onChange={(e) => update({ technicalResponsible: e.target.value })} />
+            </div>
+          </div>
+
+          {/* Brand color */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Cor Primária do Relatório</Label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={filters.brandColor}
+                onChange={(e) => update({ brandColor: e.target.value })}
+                className="h-9 w-12 rounded border border-border cursor-pointer bg-transparent p-0.5"
+              />
+              <Input
+                value={filters.brandColor}
+                onChange={(e) => update({ brandColor: e.target.value })}
+                className="w-28 font-mono text-sm uppercase"
+                maxLength={7}
+                placeholder="#1E40AF"
+              />
+              <span className="text-xs text-muted-foreground">Capa, títulos e tabelas</span>
             </div>
           </div>
 

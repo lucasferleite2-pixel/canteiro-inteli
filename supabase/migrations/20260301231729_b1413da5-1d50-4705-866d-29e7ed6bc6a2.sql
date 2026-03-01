@@ -1,0 +1,1 @@
+ALTER TABLE public.companies ADD COLUMN brand_color TEXT DEFAULT '#1E40AF';

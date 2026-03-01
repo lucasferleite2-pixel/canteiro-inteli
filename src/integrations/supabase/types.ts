@@ -134,6 +134,7 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          brand_color: string | null
           cnpj: string | null
           created_at: string
           id: string
@@ -146,6 +147,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          brand_color?: string | null
           cnpj?: string | null
           created_at?: string
           id?: string
@@ -158,6 +160,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          brand_color?: string | null
           cnpj?: string | null
           created_at?: string
           id?: string

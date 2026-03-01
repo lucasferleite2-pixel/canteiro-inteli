@@ -61,6 +61,17 @@ interface PdfOptions {
   aiSummary?: string | null;
   contentFilters?: PdfContentFilters;
   logoBase64?: string | null;
+  brandColor?: string;
+}
+
+// Helper to convert hex to RGB tuple
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.substring(0, 2), 16),
+    parseInt(h.substring(2, 4), 16),
+    parseInt(h.substring(4, 6), 16),
+  ];
 }
 
 // ── Helpers ──
@@ -130,7 +141,8 @@ export async function generateDiaryPDF(
   companyId: string,
   onProgress?: (step: string) => void
 ): Promise<void> {
-  const { projectName, companyName, companyAddress, companyPhone, technicalResponsible, entries, userName, includePhotos = true, aiSummary, contentFilters, logoBase64 } = options;
+  const { projectName, companyName, companyAddress, companyPhone, technicalResponsible, entries, userName, includePhotos = true, aiSummary, contentFilters, logoBase64, brandColor } = options;
+  const BC = brandColor ? hexToRgb(brandColor) : BLUE;
   const showActivities = contentFilters?.includeActivities ?? true;
   const showOccurrences = contentFilters?.includeOccurrences ?? true;
   const showMaterials = contentFilters?.includeMaterials ?? true;
@@ -173,7 +185,7 @@ export async function generateDiaryPDF(
   onProgress?.("Gerando capa...");
 
   // Background accent bar
-  doc.setFillColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setFillColor(BC[0], BC[1], BC[2]);
   doc.rect(0, 0, pageW, 8, "F");
   doc.rect(0, pageH - 8, pageW, 8, "F");
 
@@ -193,12 +205,12 @@ export async function generateDiaryPDF(
   // Title
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setTextColor(BC[0], BC[1], BC[2]);
   doc.text("RELATÓRIO", pageW / 2, 50, { align: "center" });
   doc.text("DIÁRIO DE OBRA", pageW / 2, 62, { align: "center" });
 
   // Divider
-  doc.setDrawColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setDrawColor(BC[0], BC[1], BC[2]);
   doc.setLineWidth(0.8);
   doc.line(60, 70, pageW - 60, 70);
 
@@ -277,10 +289,10 @@ export async function generateDiaryPDF(
 
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setTextColor(BC[0], BC[1], BC[2]);
   doc.text("Sumário", 14, 24);
 
-  doc.setDrawColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setDrawColor(BC[0], BC[1], BC[2]);
   doc.setLineWidth(0.5);
   doc.line(14, 28, 60, 28);
 
@@ -304,7 +316,7 @@ export async function generateDiaryPDF(
   // ═══════════════════════════════════════
   onProgress?.("Gerando resumo estatístico...");
   doc.addPage();
-  addSectionHeader(doc, "1. Resumo Estatístico");
+  addSectionHeader(doc, "1. Resumo Estatístico", 24, BC);
 
   const weatherCount: Record<string, number> = {};
   let totalTeam = 0;
@@ -329,7 +341,7 @@ export async function generateDiaryPDF(
       ]),
     ],
     theme: "grid",
-    headStyles: { fillColor: [BLUE[0], BLUE[1], BLUE[2]] },
+    headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
     styles: { fontSize: 9 },
   });
 
@@ -343,7 +355,7 @@ export async function generateDiaryPDF(
     if (lastY > pageH - 60) doc.addPage();
 
     const startY = lastY > pageH - 60 ? 20 : lastY + 14;
-    addSectionHeader(doc, `${sectionNum}. Resumo Executivo (IA)`, startY);
+    addSectionHeader(doc, `${sectionNum}. Resumo Executivo (IA)`, startY, BC);
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
@@ -358,7 +370,7 @@ export async function generateDiaryPDF(
   // ═══════════════════════════════════════
   onProgress?.("Gerando registros cronológicos...");
   doc.addPage();
-  addSectionHeader(doc, `${sectionNum}. Registros Cronológicos`);
+  addSectionHeader(doc, `${sectionNum}. Registros Cronológicos`, 24, BC);
 
   autoTable(doc, {
     startY: 38,
@@ -372,7 +384,7 @@ export async function generateDiaryPDF(
       ...(showMaterials ? [(e.materials || "—").substring(0, 80)] : []),
     ]),
     theme: "grid",
-    headStyles: { fillColor: [BLUE[0], BLUE[1], BLUE[2]] },
+    headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
     styles: { fontSize: 7, cellPadding: 2 },
     columnStyles: { 3: { cellWidth: 45 }, 4: { cellWidth: 30 }, 5: { cellWidth: 30 } },
   });
@@ -380,12 +392,12 @@ export async function generateDiaryPDF(
   // Detailed entries
   for (const entry of entries) {
     doc.addPage();
-    doc.setFillColor(BLUE[0], BLUE[1], BLUE[2]);
+    doc.setFillColor(BC[0], BC[1], BC[2]);
     doc.rect(0, 0, pageW, 4, "F");
 
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+    doc.setTextColor(BC[0], BC[1], BC[2]);
     doc.text(fmtDate(entry.entry_date), 14, 18);
 
     // Metadata row
@@ -437,7 +449,7 @@ export async function generateDiaryPDF(
   if (includePhotos) {
     onProgress?.("Carregando fotos...");
     doc.addPage();
-    addSectionHeader(doc, `${sectionNum}. Registro Fotográfico`);
+    addSectionHeader(doc, `${sectionNum}. Registro Fotográfico`, 24, BC);
 
     let photoY = 38;
     let hasPhotos = false;
@@ -454,7 +466,7 @@ export async function generateDiaryPDF(
       }
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+      doc.setTextColor(BC[0], BC[1], BC[2]);
       doc.text(fmtDate(entry.entry_date), 14, photoY);
       photoY += 6;
 
@@ -526,7 +538,7 @@ export async function generateDiaryPDF(
   // ═══════════════════════════════════════
   onProgress?.("Finalizando documento...");
   doc.addPage();
-  addSectionHeader(doc, `${sectionNum}. Informações de Verificação`);
+  addSectionHeader(doc, `${sectionNum}. Informações de Verificação`, 24, BC);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -567,12 +579,12 @@ export async function generateDiaryPDF(
   doc.save(fileName);
 }
 
-function addSectionHeader(doc: jsPDF, title: string, y = 24) {
+function addSectionHeader(doc: jsPDF, title: string, y = 24, color: readonly [number, number, number] = BLUE) {
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setTextColor(color[0], color[1], color[2]);
   doc.text(title, 14, y);
-  doc.setDrawColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setDrawColor(color[0], color[1], color[2]);
   doc.setLineWidth(0.4);
   doc.line(14, y + 3, 100, y + 3);
 }
