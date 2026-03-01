@@ -242,6 +242,7 @@ export default function DiarioObra() {
           includePhotos: filters.includePhotos,
           aiSummary: ai.result || null,
           contentFilters,
+          logoBase64: filters.includeLogo ? filters.logoBase64 : null,
         },
         companyId!,
         (step) => setPdfProgress(step)
