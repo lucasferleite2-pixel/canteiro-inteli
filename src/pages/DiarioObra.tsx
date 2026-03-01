@@ -16,11 +16,10 @@ import { DiaryPhotoGallery } from "@/components/diary/DiaryPhotoGallery";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { ptBR } from "date-fns/locale";
 import { useAIAnalysis } from "@/hooks/useAIAnalysis";
 import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
+import { generateDiaryPDF } from "@/lib/diaryPdfGenerator";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -192,72 +191,32 @@ export default function DiarioObra() {
     ai.analyze("diary_summary", { projectName, entries });
   };
 
-  const exportPDF = () => {
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState("");
+
+  const exportPDF = async () => {
     if (entries.length === 0) return;
-    const doc = new jsPDF();
-    const projectName = projects.find((p) => p.id === selectedProject)?.name || "Obra";
-    const now = format(new Date(), "dd/MM/yyyy HH:mm");
-
-    // Header
-    doc.setFontSize(18);
-    doc.text("Diário de Obra", 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Obra: ${projectName}`, 14, 28);
-    doc.text(`Gerado em: ${now}`, 14, 34);
-    doc.text(`Total de registros: ${entries.length}`, 14, 40);
-
-    // Summary stats
-    const weatherCount: Record<string, number> = {};
-    let totalTeam = 0;
-    let daysWithOccurrences = 0;
-    entries.forEach((e: any) => {
-      if (e.weather) weatherCount[e.weather] = (weatherCount[e.weather] || 0) + 1;
-      totalTeam += e.team_count || 0;
-      if (e.occurrences) daysWithOccurrences++;
-    });
-    const avgTeam = entries.length > 0 ? Math.round(totalTeam / entries.length) : 0;
-
-    doc.setFontSize(13);
-    doc.text("Resumo", 14, 52);
-    autoTable(doc, {
-      startY: 56,
-      head: [["Indicador", "Valor"]],
-      body: [
-        ["Total de registros", String(entries.length)],
-        ["Média de equipe/dia", String(avgTeam)],
-        ["Dias com ocorrências", String(daysWithOccurrences)],
-        ...Object.entries(weatherCount).map(([w, c]) => [
-          `Clima: ${weatherOptions.find((o) => o.value === w)?.label || w}`,
-          `${c} dia(s)`,
-        ]),
-      ],
-      theme: "grid",
-      headStyles: { fillColor: [59, 130, 246] },
-    });
-
-    // Entries table
-    const y1 = (doc as any).lastAutoTable?.finalY ?? 90;
-    doc.setFontSize(13);
-    doc.text("Registros", 14, y1 + 12);
-    autoTable(doc, {
-      startY: y1 + 16,
-      head: [["Data", "Clima", "Equipe", "Atividades", "Ocorrências", "Materiais"]],
-      body: entries.map((e: any) => [
-        e.entry_date,
-        weatherOptions.find((o) => o.value === e.weather)?.label || e.weather || "—",
-        e.team_count ?? 0,
-        (e.activities || "—").substring(0, 80),
-        (e.occurrences || "—").substring(0, 60),
-        (e.materials || "—").substring(0, 60),
-      ]),
-      theme: "grid",
-      headStyles: { fillColor: [59, 130, 246] },
-      styles: { fontSize: 7, cellPadding: 2 },
-      columnStyles: { 3: { cellWidth: 40 }, 4: { cellWidth: 30 }, 5: { cellWidth: 30 } },
-    });
-
-    doc.save(`diario-obra-${projectName.replace(/\s+/g, "-").toLowerCase()}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
-    toast({ title: "PDF exportado com sucesso!" });
+    setPdfLoading(true);
+    setPdfProgress("Iniciando...");
+    try {
+      await generateDiaryPDF(
+        {
+          projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
+          entries,
+          userName: user?.email || undefined,
+          includePhotos: true,
+          aiSummary: ai.result || null,
+        },
+        companyId!,
+        (step) => setPdfProgress(step)
+      );
+      toast({ title: "PDF exportado com sucesso!" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro ao gerar PDF", description: err.message });
+    } finally {
+      setPdfLoading(false);
+      setPdfProgress("");
+    }
   };
 
   return (
@@ -270,8 +229,9 @@ export default function DiarioObra() {
         <div className="flex items-center gap-2">
           {selectedProject && entries.length > 0 && (
             <>
-              <Button variant="outline" onClick={exportPDF}>
-                <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
+              <Button variant="outline" onClick={exportPDF} disabled={pdfLoading}>
+                {pdfLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                {pdfLoading ? pdfProgress : "Exportar PDF"}
               </Button>
               <Button variant="outline" onClick={handleAISummary} disabled={ai.isLoading}>
                 {ai.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
