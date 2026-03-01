@@ -40,6 +40,15 @@ interface DiaryPhoto {
   longitude: number | null;
 }
 
+export interface PdfContentFilters {
+  includePhotos?: boolean;
+  includeActivities?: boolean;
+  includeOccurrences?: boolean;
+  includeMaterials?: boolean;
+  includeTechnicalComments?: boolean;
+  reportTypeLabel?: string;
+}
+
 interface PdfOptions {
   projectName: string;
   companyName?: string;
@@ -47,6 +56,7 @@ interface PdfOptions {
   userName?: string;
   includePhotos?: boolean;
   aiSummary?: string | null;
+  contentFilters?: PdfContentFilters;
 }
 
 // ── Helpers ──
@@ -116,7 +126,12 @@ export async function generateDiaryPDF(
   companyId: string,
   onProgress?: (step: string) => void
 ): Promise<void> {
-  const { projectName, companyName, entries, userName, includePhotos = true, aiSummary } = options;
+  const { projectName, companyName, entries, userName, includePhotos = true, aiSummary, contentFilters } = options;
+  const showActivities = contentFilters?.includeActivities ?? true;
+  const showOccurrences = contentFilters?.includeOccurrences ?? true;
+  const showMaterials = contentFilters?.includeMaterials ?? true;
+  const showTechnical = contentFilters?.includeTechnicalComments ?? true;
+  const reportTypeLabel = contentFilters?.reportTypeLabel || "Personalizado";
   const doc = new jsPDF();
   const now = new Date();
   const generatedAt = format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
@@ -195,6 +210,7 @@ export async function generateDiaryPDF(
     [`Gerado por: ${userName || "Sistema"}`],
     [`Total de Registros: ${entries.length}`],
     [`Período: ${entries.length > 0 ? `${fmtDateShort(entries[entries.length - 1].entry_date)} a ${fmtDateShort(entries[0].entry_date)}` : "—"}`],
+    [`Tipo de Relatório: ${reportTypeLabel}`],
   ];
   meta.forEach((line, i) => {
     doc.text(line[0], 38, boxY + 10 + i * 8);
@@ -313,14 +329,14 @@ export async function generateDiaryPDF(
 
   autoTable(doc, {
     startY: 38,
-    head: [["Data", "Clima", "Equipe", "Atividades", "Ocorrências", "Materiais"]],
+    head: [["Data", "Clima", "Equipe", ...(showActivities ? ["Atividades"] : []), ...(showOccurrences ? ["Ocorrências"] : []), ...(showMaterials ? ["Materiais"] : [])]],
     body: entries.map((e) => [
       fmtDateShort(e.entry_date),
       weatherLabels[e.weather || ""] || e.weather || "—",
       String(e.team_count ?? 0),
-      (e.activities || "—").substring(0, 120),
-      (e.occurrences || "—").substring(0, 80),
-      (e.materials || "—").substring(0, 80),
+      ...(showActivities ? [(e.activities || "—").substring(0, 120)] : []),
+      ...(showOccurrences ? [(e.occurrences || "—").substring(0, 80)] : []),
+      ...(showMaterials ? [(e.materials || "—").substring(0, 80)] : []),
     ]),
     theme: "grid",
     headStyles: { fillColor: [BLUE[0], BLUE[1], BLUE[2]] },
@@ -354,10 +370,10 @@ export async function generateDiaryPDF(
 
     let y = 32;
     const sections = [
-      { label: "Atividades Realizadas", value: entry.activities },
-      { label: "Ocorrências", value: entry.occurrences },
-      { label: "Materiais Utilizados", value: entry.materials },
-      { label: "Comentários Técnicos", value: entry.technical_comments },
+      ...(showActivities ? [{ label: "Atividades Realizadas", value: entry.activities }] : []),
+      ...(showOccurrences ? [{ label: "Ocorrências", value: entry.occurrences }] : []),
+      ...(showMaterials ? [{ label: "Materiais Utilizados", value: entry.materials }] : []),
+      ...(showTechnical ? [{ label: "Comentários Técnicos", value: entry.technical_comments }] : []),
     ];
 
     for (const s of sections) {

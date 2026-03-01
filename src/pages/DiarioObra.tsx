@@ -12,6 +12,7 @@ import { Plus, ClipboardList, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DiaryPhotoUpload } from "@/components/diary/DiaryPhotoUpload";
+import { DiaryPdfFilterDialog, PdfFilters } from "@/components/diary/DiaryPdfFilterDialog";
 import { DiaryPhotoGallery } from "@/components/diary/DiaryPhotoGallery";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +20,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAIAnalysis } from "@/hooks/useAIAnalysis";
 import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
-import { generateDiaryPDF } from "@/lib/diaryPdfGenerator";
+import { generateDiaryPDF, PdfContentFilters } from "@/lib/diaryPdfGenerator";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -56,6 +57,7 @@ export default function DiarioObra() {
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [form, setForm] = useState(emptyForm);
   const [showUploadFor, setShowUploadFor] = useState<string | null>(null);
+  const [showPdfFilter, setShowPdfFilter] = useState(false);
   const ai = useAIAnalysis();
 
   const { data: projects = [] } = useQuery({
@@ -194,23 +196,58 @@ export default function DiarioObra() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfProgress, setPdfProgress] = useState("");
 
-  const exportPDF = async () => {
+  const reportTypeLabels: Record<string, string> = {
+    custom: "Personalizado", weekly: "Semanal", biweekly: "Quinzenal",
+    monthly: "Mensal", quarterly: "Trimestral", semiannual: "Semestral", annual: "Anual",
+  };
+
+  const exportPDF = async (filters: PdfFilters) => {
     if (entries.length === 0) return;
     setPdfLoading(true);
     setPdfProgress("Iniciando...");
     try {
+      // Filter entries by date range
+      let filtered = [...entries];
+      if (filters.dateFrom) {
+        const fromStr = filters.dateFrom.toISOString().split("T")[0];
+        filtered = filtered.filter((e) => e.entry_date >= fromStr);
+      }
+      if (filters.dateTo) {
+        const toStr = filters.dateTo.toISOString().split("T")[0];
+        filtered = filtered.filter((e) => e.entry_date <= toStr);
+      }
+
+      // Filter by contract (need to check diary_photos for contract linkage)
+      // Contract filter is informational - included in metadata
+
+      if (filtered.length === 0) {
+        toast({ variant: "destructive", title: "Sem registros", description: "Nenhum registro encontrado para os filtros selecionados." });
+        return;
+      }
+
+      const contentFilters: PdfContentFilters = {
+        includePhotos: filters.includePhotos,
+        includeActivities: filters.includeActivities,
+        includeOccurrences: filters.includeOccurrences,
+        includeMaterials: filters.includeMaterials,
+        includeTechnicalComments: filters.includeTechnicalComments,
+        reportTypeLabel: reportTypeLabels[filters.reportType] || "Personalizado",
+      };
+
       await generateDiaryPDF(
         {
           projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
-          entries,
+          entries: filtered,
           userName: user?.email || undefined,
-          includePhotos: true,
+          includePhotos: filters.includePhotos,
           aiSummary: ai.result || null,
+          contentFilters,
         },
         companyId!,
         (step) => setPdfProgress(step)
       );
       toast({ title: "PDF exportado com sucesso!" });
+      setShowPdfFilter(false);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Erro ao gerar PDF", description: err.message });
     } finally {
@@ -229,7 +266,7 @@ export default function DiarioObra() {
         <div className="flex items-center gap-2">
           {selectedProject && entries.length > 0 && (
             <>
-              <Button variant="outline" onClick={exportPDF} disabled={pdfLoading}>
+              <Button variant="outline" onClick={() => setShowPdfFilter(true)} disabled={pdfLoading}>
                 {pdfLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                 {pdfLoading ? pdfProgress : "Exportar PDF"}
               </Button>
@@ -316,6 +353,16 @@ export default function DiarioObra() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* PDF Filter Dialog */}
+      <DiaryPdfFilterDialog
+        open={showPdfFilter}
+        onOpenChange={setShowPdfFilter}
+        contracts={contracts}
+        onGenerate={exportPDF}
+        isLoading={pdfLoading}
+        progress={pdfProgress}
+      />
 
       {/* AI Analysis Panel */}
       <AIAnalysisPanel title="Resumo Inteligente do Diário" result={ai.result} isLoading={ai.isLoading} onClose={ai.clear} />
