@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +27,10 @@ export interface PdfFilters {
   includeTechnicalComments: boolean;
   includeLogo: boolean;
   logoBase64: string | null;
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  technicalResponsible: string;
 }
 
 interface Props {
@@ -96,15 +101,29 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
     includeTechnicalComments: true,
     includeLogo: true,
     logoBase64: null,
+    companyName: "",
+    companyAddress: "",
+    companyPhone: "",
+    technicalResponsible: "",
   });
 
-  // Load existing logo on open
-  const loadExistingLogo = async () => {
+  const loadCompanyData = async () => {
     if (!companyId) return;
-    const { data: company } = await supabase.from("companies").select("logo_url").eq("id", companyId).maybeSingle();
-    if (company?.logo_url) {
+    const { data: company } = await supabase
+      .from("companies")
+      .select("logo_url, name, address, phone, technical_responsible")
+      .eq("id", companyId)
+      .maybeSingle();
+    if (!company) return;
+    setFilters((f) => ({
+      ...f,
+      companyName: company.name || "",
+      companyAddress: (company as any).address || "",
+      companyPhone: (company as any).phone || "",
+      technicalResponsible: (company as any).technical_responsible || "",
+    }));
+    if (company.logo_url) {
       setLogoPreview(company.logo_url);
-      // Pre-load as base64
       try {
         const res = await fetch(company.logo_url);
         const blob = await res.blob();
@@ -165,9 +184,9 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
 
   const update = (partial: Partial<PdfFilters>) => setFilters((f) => ({ ...f, ...partial }));
 
-  // Load logo when dialog opens
+  // Load company data when dialog opens
   const handleOpenChange = (v: boolean) => {
-    if (v) loadExistingLogo();
+    if (v) loadCompanyData();
     onOpenChange(v);
   };
 
@@ -219,6 +238,16 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
               </Select>
             </div>
           )}
+
+          {/* Company details */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Dados da Empresa (Capa)</Label>
+            <div className="space-y-2">
+              <Input placeholder="Endereço" value={filters.companyAddress} onChange={(e) => update({ companyAddress: e.target.value })} />
+              <Input placeholder="Telefone" value={filters.companyPhone} onChange={(e) => update({ companyPhone: e.target.value })} />
+              <Input placeholder="Responsável Técnico" value={filters.technicalResponsible} onChange={(e) => update({ technicalResponsible: e.target.value })} />
+            </div>
+          </div>
 
           {/* Company logo */}
           <div className="space-y-3">

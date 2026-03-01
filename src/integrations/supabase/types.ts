@@ -133,30 +133,39 @@ export type Database = {
       }
       companies: {
         Row: {
+          address: string | null
           cnpj: string | null
           created_at: string
           id: string
           logo_url: string | null
           name: string
           owner_id: string | null
+          phone: string | null
+          technical_responsible: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
           cnpj?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name: string
           owner_id?: string | null
+          phone?: string | null
+          technical_responsible?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
           cnpj?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name?: string
           owner_id?: string | null
+          phone?: string | null
+          technical_responsible?: string | null
           updated_at?: string
         }
         Relationships: []

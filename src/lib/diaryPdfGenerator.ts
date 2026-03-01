@@ -52,6 +52,9 @@ export interface PdfContentFilters {
 interface PdfOptions {
   projectName: string;
   companyName?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  technicalResponsible?: string;
   entries: DiaryEntry[];
   userName?: string;
   includePhotos?: boolean;
@@ -127,7 +130,7 @@ export async function generateDiaryPDF(
   companyId: string,
   onProgress?: (step: string) => void
 ): Promise<void> {
-  const { projectName, companyName, entries, userName, includePhotos = true, aiSummary, contentFilters, logoBase64 } = options;
+  const { projectName, companyName, companyAddress, companyPhone, technicalResponsible, entries, userName, includePhotos = true, aiSummary, contentFilters, logoBase64 } = options;
   const showActivities = contentFilters?.includeActivities ?? true;
   const showOccurrences = contentFilters?.includeOccurrences ?? true;
   const showMaterials = contentFilters?.includeMaterials ?? true;
@@ -209,6 +212,22 @@ export async function generateDiaryPDF(
     doc.setFontSize(11);
     doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
     doc.text(companyName, pageW / 2, 93, { align: "center" });
+  }
+
+  // Company details below name
+  let detailY = companyName ? 100 : 93;
+  doc.setFontSize(8);
+  doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
+  if (companyAddress) {
+    doc.text(companyAddress, pageW / 2, detailY, { align: "center" });
+    detailY += 5;
+  }
+  if (companyPhone) {
+    doc.text(`Tel: ${companyPhone}`, pageW / 2, detailY, { align: "center" });
+    detailY += 5;
+  }
+  if (technicalResponsible) {
+    doc.text(`Resp. Técnico: ${technicalResponsible}`, pageW / 2, detailY, { align: "center" });
   }
 
   // Metadata box
