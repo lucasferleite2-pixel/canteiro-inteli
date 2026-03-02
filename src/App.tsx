@@ -14,6 +14,7 @@ import Financeiro from "@/pages/Financeiro";
 import Licitacoes from "@/pages/Licitacoes";
 import Alertas from "@/pages/Alertas";
 import Usuarios from "@/pages/Usuarios";
+import EmpresaConfig from "@/pages/EmpresaConfig";
 import Auth from "@/pages/Auth";
 import CompanySetup from "@/pages/CompanySetup";
 import NotFound from "./pages/NotFound";
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/licitacoes" element={<Licitacoes />} />
               <Route path="/alertas" element={<Alertas />} />
               <Route path="/usuarios" element={<Usuarios />} />
+              <Route path="/empresa/config" element={<EmpresaConfig />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
