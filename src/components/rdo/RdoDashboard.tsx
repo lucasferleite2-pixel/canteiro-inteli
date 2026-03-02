@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { RdoPerformanceTab } from "./tabs/RdoPerformanceTab";
 import {
   TrendingUp,
   DollarSign,
@@ -30,9 +31,11 @@ import {
 
 interface RdoDashboardProps {
   rdos: any[];
+  obraId?: string;
+  companyId?: string;
 }
 
-export function RdoDashboard({ rdos }: RdoDashboardProps) {
+export function RdoDashboard({ rdos, obraId, companyId }: RdoDashboardProps) {
   const stats = useMemo(() => {
     if (!rdos.length) return null;
 
@@ -359,6 +362,11 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Performance by Phase */}
+      {obraId && companyId && (
+        <RdoPerformanceTab obraId={obraId} companyId={companyId} rdos={rdos} />
+      )}
     </div>
   );
 }
