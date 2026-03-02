@@ -223,6 +223,8 @@ export async function generateRdoPDF(
   const now = new Date();
   const generatedAt = format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   const reportId = `RDO2-${format(now, "yyyyMMddHHmmss")}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  // Height reserved for the header drawn in the final loop (pages > 1)
+  const HEADER_OFFSET = 20;
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
 
@@ -365,6 +367,7 @@ export async function generateRdoPDF(
     theme: "grid",
     headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
     styles: { fontSize: 9 },
+    margin: { top: HEADER_OFFSET + 4 },
   });
 
   // ═══════════════════════════════════════
@@ -442,6 +445,7 @@ export async function generateRdoPDF(
     theme: "grid",
     headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
     styles: { fontSize: 7, cellPadding: 2 },
+    margin: { top: HEADER_OFFSET + 4 },
   });
 
   // Detailed entries
@@ -449,13 +453,11 @@ export async function generateRdoPDF(
     const rdo = sorted[idx];
     onProgress?.(`Processando RDO ${idx + 1}/${sorted.length}...`);
     doc.addPage();
-    doc.setFillColor(BC[0], BC[1], BC[2]);
-    doc.rect(0, 0, pageW, 4, "F");
 
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(BC[0], BC[1], BC[2]);
-    doc.text(fmtDate(rdo.data), 14, 18);
+    doc.text(fmtDate(rdo.data), 14, HEADER_OFFSET + 6);
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
@@ -469,9 +471,9 @@ export async function generateRdoPDF(
       rdo.fase_obra ? `Fase: ${rdo.fase_obra}` : null,
       rdo.is_locked ? "🔒" : null,
     ].filter(Boolean).join("  |  ");
-    doc.text(metaLine, 14, 24);
+    doc.text(metaLine, 14, HEADER_OFFSET + 12);
 
-    let y = 32;
+    let y = HEADER_OFFSET + 20;
 
     if (rdo.observacoes_gerais) {
       doc.setFontSize(9);
@@ -486,7 +488,7 @@ export async function generateRdoPDF(
     if (includeActivities) {
       const atividades = await fetchAtividades(rdo.id);
       if (atividades.length > 0) {
-        if (y > pageH - 40) { doc.addPage(); y = 20; }
+        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(40, 40, 40);
@@ -494,6 +496,7 @@ export async function generateRdoPDF(
         y += 2;
         autoTable(doc, {
           startY: y,
+          margin: { top: HEADER_OFFSET + 4 },
           head: [["Descrição", "Tipo", "Impacto", "Concluída"]],
           body: atividades.map((a: any) => [
             a.descricao.substring(0, 80),
@@ -513,7 +516,7 @@ export async function generateRdoPDF(
     if (includeMaterials) {
       const materiais = await fetchMateriais(rdo.id);
       if (materiais.length > 0) {
-        if (y > pageH - 40) { doc.addPage(); y = 20; }
+        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(40, 40, 40);
@@ -521,6 +524,7 @@ export async function generateRdoPDF(
         y += 2;
         autoTable(doc, {
           startY: y,
+          margin: { top: HEADER_OFFSET + 4 },
           head: [["Item", "Tipo", "Qtd", "Unidade", "V. Unit.", "V. Total", "Orçamento"]],
           body: materiais.map((m: any) => [
             m.item.substring(0, 40),
@@ -543,7 +547,7 @@ export async function generateRdoPDF(
     if (includeOccurrences) {
       const ocorrencias = await fetchOcorrencias(rdo.id);
       if (ocorrencias.length > 0) {
-        if (y > pageH - 40) { doc.addPage(); y = 20; }
+        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(40, 40, 40);
@@ -551,6 +555,7 @@ export async function generateRdoPDF(
         y += 2;
         autoTable(doc, {
           startY: y,
+          margin: { top: HEADER_OFFSET + 4 },
           head: [["Descrição", "Tipo", "Impacto", "Responsável", "Risco Contratual"]],
           body: ocorrencias.map((o: any) => [
             o.descricao.substring(0, 60),
@@ -585,7 +590,7 @@ export async function generateRdoPDF(
       if (fotos.length === 0) continue;
       hasPhotos = true;
 
-      if (photoY > pageH - 60) { doc.addPage(); photoY = 20; }
+      if (photoY > pageH - 60) { doc.addPage(); photoY = HEADER_OFFSET + 4; }
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(BC[0], BC[1], BC[2]);
@@ -593,7 +598,7 @@ export async function generateRdoPDF(
       photoY += 6;
 
       for (const foto of fotos) {
-        if (photoY > pageH - 80) { doc.addPage(); photoY = 20; }
+        if (photoY > pageH - 80) { doc.addPage(); photoY = HEADER_OFFSET + 4; }
         const base64 = await loadImageAsBase64(foto.url);
         if (base64) {
           try {
