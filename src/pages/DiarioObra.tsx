@@ -368,6 +368,7 @@ export default function DiarioObra() {
                   rdo={rdo}
                   companyId={companyId!}
                   canModify={canModifyRdo(rdo)}
+                  isAuthor={rdo.criado_por === user?.id}
                   onEdit={() => { setEditingRdo(rdo); setShowNewRdo(true); }}
                   onDelete={() => setDeleteId(rdo.id)}
                 />
