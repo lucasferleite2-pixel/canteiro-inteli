@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAIAnalysis } from "@/hooks/useAIAnalysis";
 import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
 import { generateDiaryPDF, PdfContentFilters } from "@/lib/diaryPdfGenerator";
+import { generateRdoPDF } from "@/lib/rdoPdfGenerator";
 import { RdoSmartCard } from "@/components/rdo/RdoSmartCard";
 import { RdoFilters, RdoFilterValues, defaultFilters } from "@/components/rdo/RdoFilters";
 import { RdoNewDayDialog } from "@/components/rdo/RdoNewDayDialog";
@@ -133,55 +134,104 @@ export default function DiarioObra() {
   };
 
   const exportPDF = async (pdfFilters: PdfFilters) => {
-    if (legacyEntries.length === 0) return;
+    // Use RDO 2.0 generator if we have structured data
+    const hasRdoData = filteredRdos.length > 0;
+    if (!hasRdoData && legacyEntries.length === 0) return;
+
     setPdfLoading(true);
     setPdfProgress("Iniciando...");
     try {
-      let filtered = [...legacyEntries];
-      if (pdfFilters.dateFrom) {
-        const fromStr = pdfFilters.dateFrom.toISOString().split("T")[0];
-        filtered = filtered.filter((e) => e.entry_date >= fromStr);
-      }
-      if (pdfFilters.dateTo) {
-        const toStr = pdfFilters.dateTo.toISOString().split("T")[0];
-        filtered = filtered.filter((e) => e.entry_date <= toStr);
-      }
-      if (filtered.length === 0) {
-        toast({ variant: "destructive", title: "Sem registros", description: "Nenhum registro encontrado para os filtros selecionados." });
-        return;
-      }
-      const contentFilters: PdfContentFilters = {
-        includePhotos: pdfFilters.includePhotos,
-        includeActivities: pdfFilters.includeActivities,
-        includeOccurrences: pdfFilters.includeOccurrences,
-        includeMaterials: pdfFilters.includeMaterials,
-        includeTechnicalComments: pdfFilters.includeTechnicalComments,
-        reportTypeLabel: reportTypeLabels[pdfFilters.reportType] || "Personalizado",
-      };
-      await supabase.from("companies").update({
-        address: pdfFilters.companyAddress || null,
-        phone: pdfFilters.companyPhone || null,
-        technical_responsible: pdfFilters.technicalResponsible || null,
-        brand_color: pdfFilters.brandColor || null,
-      } as any).eq("id", companyId!);
-      await generateDiaryPDF(
-        {
-          projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
-          companyName: pdfFilters.companyName || undefined,
-          companyAddress: pdfFilters.companyAddress || undefined,
-          companyPhone: pdfFilters.companyPhone || undefined,
-          technicalResponsible: pdfFilters.technicalResponsible || undefined,
-          entries: filtered,
-          userName: user?.email || undefined,
+      if (hasRdoData) {
+        // RDO 2.0 PDF with structured data, charts, and risk indicators
+        let rdosForPdf = [...filteredRdos];
+        if (pdfFilters.dateFrom) {
+          const fromStr = pdfFilters.dateFrom.toISOString().split("T")[0];
+          rdosForPdf = rdosForPdf.filter((r: any) => r.data >= fromStr);
+        }
+        if (pdfFilters.dateTo) {
+          const toStr = pdfFilters.dateTo.toISOString().split("T")[0];
+          rdosForPdf = rdosForPdf.filter((r: any) => r.data <= toStr);
+        }
+        if (rdosForPdf.length === 0) {
+          toast({ variant: "destructive", title: "Sem registros", description: "Nenhum RDO encontrado para os filtros selecionados." });
+          return;
+        }
+
+        await supabase.from("companies").update({
+          address: pdfFilters.companyAddress || null,
+          phone: pdfFilters.companyPhone || null,
+          technical_responsible: pdfFilters.technicalResponsible || null,
+          brand_color: pdfFilters.brandColor || null,
+        } as any).eq("id", companyId!);
+
+        await generateRdoPDF(
+          {
+            projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
+            companyName: pdfFilters.companyName || undefined,
+            companyAddress: pdfFilters.companyAddress || undefined,
+            companyPhone: pdfFilters.companyPhone || undefined,
+            technicalResponsible: pdfFilters.technicalResponsible || undefined,
+            rdos: rdosForPdf,
+            userName: user?.email || undefined,
+            aiSummary: ai.result || null,
+            logoBase64: pdfFilters.includeLogo ? pdfFilters.logoBase64 : null,
+            brandColor: pdfFilters.brandColor,
+            includePhotos: pdfFilters.includePhotos,
+            includeActivities: pdfFilters.includeActivities,
+            includeOccurrences: pdfFilters.includeOccurrences,
+            includeMaterials: pdfFilters.includeMaterials,
+          },
+          companyId!,
+          (step) => setPdfProgress(step)
+        );
+      } else {
+        // Legacy PDF for old diary_entries
+        let filtered = [...legacyEntries];
+        if (pdfFilters.dateFrom) {
+          const fromStr = pdfFilters.dateFrom.toISOString().split("T")[0];
+          filtered = filtered.filter((e) => e.entry_date >= fromStr);
+        }
+        if (pdfFilters.dateTo) {
+          const toStr = pdfFilters.dateTo.toISOString().split("T")[0];
+          filtered = filtered.filter((e) => e.entry_date <= toStr);
+        }
+        if (filtered.length === 0) {
+          toast({ variant: "destructive", title: "Sem registros", description: "Nenhum registro encontrado para os filtros selecionados." });
+          return;
+        }
+        const contentFilters: PdfContentFilters = {
           includePhotos: pdfFilters.includePhotos,
-          aiSummary: ai.result || null,
-          contentFilters,
-          logoBase64: pdfFilters.includeLogo ? pdfFilters.logoBase64 : null,
-          brandColor: pdfFilters.brandColor,
-        },
-        companyId!,
-        (step) => setPdfProgress(step)
-      );
+          includeActivities: pdfFilters.includeActivities,
+          includeOccurrences: pdfFilters.includeOccurrences,
+          includeMaterials: pdfFilters.includeMaterials,
+          includeTechnicalComments: pdfFilters.includeTechnicalComments,
+          reportTypeLabel: reportTypeLabels[pdfFilters.reportType] || "Personalizado",
+        };
+        await supabase.from("companies").update({
+          address: pdfFilters.companyAddress || null,
+          phone: pdfFilters.companyPhone || null,
+          technical_responsible: pdfFilters.technicalResponsible || null,
+          brand_color: pdfFilters.brandColor || null,
+        } as any).eq("id", companyId!);
+        await generateDiaryPDF(
+          {
+            projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
+            companyName: pdfFilters.companyName || undefined,
+            companyAddress: pdfFilters.companyAddress || undefined,
+            companyPhone: pdfFilters.companyPhone || undefined,
+            technicalResponsible: pdfFilters.technicalResponsible || undefined,
+            entries: filtered,
+            userName: user?.email || undefined,
+            includePhotos: pdfFilters.includePhotos,
+            aiSummary: ai.result || null,
+            contentFilters,
+            logoBase64: pdfFilters.includeLogo ? pdfFilters.logoBase64 : null,
+            brandColor: pdfFilters.brandColor,
+          },
+          companyId!,
+          (step) => setPdfProgress(step)
+        );
+      }
       toast({ title: "PDF exportado com sucesso!" });
       setShowPdfFilter(false);
     } catch (err: any) {
