@@ -17,6 +17,7 @@ import Usuarios from "@/pages/Usuarios";
 import EmpresaConfig from "@/pages/EmpresaConfig";
 import AuditoriaRdo from "@/pages/AuditoriaRdo";
 import Comparativo from "@/pages/Comparativo";
+import PlanejamentoFases from "@/pages/PlanejamentoFases";
 import Auth from "@/pages/Auth";
 import CompanySetup from "@/pages/CompanySetup";
 import NotFound from "./pages/NotFound";
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/empresa/config" element={<EmpresaConfig />} />
               <Route path="/auditoria" element={<AuditoriaRdo />} />
               <Route path="/comparativo" element={<Comparativo />} />
+              <Route path="/planejamento" element={<PlanejamentoFases />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
