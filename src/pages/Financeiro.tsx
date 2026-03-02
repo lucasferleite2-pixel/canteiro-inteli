@@ -14,6 +14,7 @@ import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Trash2, FileDown } 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DemoBanner } from "@/components/DemoBanner";
+import { DEMO_FINANCIAL_RECORDS, DEMO_OBRAS } from "@/lib/demoData";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -45,7 +46,7 @@ const currencyFmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function Financeiro() {
-  const { companyId } = useAuth();
+  const { companyId, isDemo } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterProject, setFilterProject] = useState<string>("all");
@@ -62,8 +63,9 @@ export default function Financeiro() {
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["projects", companyId],
-    enabled: !!companyId,
+    enabled: !!companyId || isDemo,
     queryFn: async () => {
+      if (isDemo) return DEMO_OBRAS.map((o) => ({ id: o.id, name: o.name, budget: o.budget }));
       const { data, error } = await supabase
         .from("projects")
         .select("id, name, budget")
@@ -75,8 +77,9 @@ export default function Financeiro() {
 
   const { data: records = [], isLoading } = useQuery<FinancialRecord[]>({
     queryKey: ["financial_records", companyId],
-    enabled: !!companyId,
+    enabled: !!companyId || isDemo,
     queryFn: async () => {
+      if (isDemo) return DEMO_FINANCIAL_RECORDS as unknown as FinancialRecord[];
       const { data, error } = await supabase
         .from("financial_records")
         .select("*")
