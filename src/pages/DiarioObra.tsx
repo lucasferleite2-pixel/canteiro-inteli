@@ -18,6 +18,7 @@ import { generateRdoPDF } from "@/lib/rdoPdfGenerator";
 import { RdoSmartCard } from "@/components/rdo/RdoSmartCard";
 import { RdoFilters, RdoFilterValues, defaultFilters } from "@/components/rdo/RdoFilters";
 import { RdoNewDayDialog } from "@/components/rdo/RdoNewDayDialog";
+import { RdoDashboard } from "@/components/rdo/RdoDashboard";
 
 export default function DiarioObra() {
   const { companyId, user } = useAuth();
@@ -285,6 +286,11 @@ export default function DiarioObra() {
       {/* Filters */}
       {selectedProject && rdos.length > 0 && (
         <RdoFilters filters={filters} onChange={setFilters} />
+      )}
+
+      {/* KPI Dashboard */}
+      {selectedProject && filteredRdos.length > 0 && (
+        <RdoDashboard rdos={filteredRdos} />
       )}
 
       {/* New RDO Dialog */}
