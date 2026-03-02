@@ -53,3 +53,53 @@ export const DEMO_RDO_ENTRIES = [
   { id: "rdo5", obra_id: "d3", data: "2026-02-28", clima: "nublado", equipe_total: 18, horas_trabalhadas: 8, produtividade_percentual: 55, risco_dia: "alto", fase_obra: "fundacao", custo_dia: 35000, percentual_fisico_dia: 0.5, percentual_fisico_acumulado: 28, observacoes_gerais: "Fundação com dificuldade devido ao nível do rio. Equipamento de bombeamento ativado.", is_locked: false, company_id: "00000000-0000-0000-0000-000000000000", criado_por: "demo-user-id", created_at: "2026-02-28T17:00:00Z", updated_at: "2026-02-28T17:00:00Z", version: 1, hash_integridade: null },
   { id: "rdo6", obra_id: "d4", data: "2026-03-01", clima: "ensolarado", equipe_total: 20, horas_trabalhadas: 8, produtividade_percentual: 91, risco_dia: "baixo", fase_obra: "alvenaria", custo_dia: 9500, percentual_fisico_dia: 1.5, percentual_fisico_acumulado: 55, observacoes_gerais: "Alvenaria das salas 9 a 12 concluída. Início da cobertura da quadra.", is_locked: true, company_id: "00000000-0000-0000-0000-000000000000", criado_por: "demo-user-id", created_at: "2026-03-01T17:00:00Z", updated_at: "2026-03-01T17:00:00Z", version: 1, hash_integridade: null },
 ];
+
+export const DEMO_ATIVIDADES = [
+  // rdo1 – Residencial Parque Verde 01/03
+  { id: "atv1", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Concretagem laje 3º pavimento — bloco A", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T08:00:00Z" },
+  { id: "atv2", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Instalação elétrica — prumadas do 2º pavimento", tipo_atividade: "Execução", impacto_cronograma: "leve", concluida: true, created_at: "2026-03-01T09:00:00Z" },
+  { id: "atv3", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Recebimento de aço CA-50 (12 ton)", tipo_atividade: "Logística", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T10:00:00Z" },
+  // rdo2 – Residencial Parque Verde 28/02
+  { id: "atv4", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Montagem de formas 3º pavimento — bloco B", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-02-28T08:00:00Z" },
+  { id: "atv5", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Conferência topográfica de níveis", tipo_atividade: "Fiscalização", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-02-28T10:00:00Z" },
+  // rdo3 – Residencial Parque Verde 27/02 (chuvoso)
+  { id: "atv6", rdo_dia_id: "rdo3", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Limpeza e drenagem da área de fundação", tipo_atividade: "Logística", impacto_cronograma: "médio", concluida: false, created_at: "2026-02-27T11:00:00Z" },
+  // rdo4 – Ed. Comercial Centro 02/03
+  { id: "atv7", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Escavação de estacas — eixo D", tipo_atividade: "Execução", impacto_cronograma: "leve", concluida: false, created_at: "2026-03-02T08:00:00Z" },
+  { id: "atv8", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Sondagem complementar — presença de rocha", tipo_atividade: "Planejamento", impacto_cronograma: "crítico", concluida: true, created_at: "2026-03-02T10:00:00Z" },
+  // rdo5 – Ponte BR-040 28/02
+  { id: "atv9", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Bombeamento de água na cava de fundação", tipo_atividade: "Logística", impacto_cronograma: "crítico", concluida: true, created_at: "2026-02-28T07:00:00Z" },
+  { id: "atv10", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Concretagem do bloco de ancoragem — eixo 1", tipo_atividade: "Execução", impacto_cronograma: "médio", concluida: false, created_at: "2026-02-28T09:00:00Z" },
+  // rdo6 – Escola Ipê 01/03
+  { id: "atv11", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Alvenaria salas 9 a 12 — conclusão", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T08:00:00Z" },
+  { id: "atv12", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Início da estrutura metálica da cobertura da quadra", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: false, created_at: "2026-03-01T13:00:00Z" },
+];
+
+export const DEMO_MATERIAIS = [
+  // rdo1
+  { id: "mat1", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Consumo", item: "Concreto fck 30 MPa", quantidade: 45, unidade: "m³", valor_unitario: 320, valor_total: 14400, previsto_em_orcamento: true, gera_alerta_desequilibrio: false, created_at: "2026-03-01T08:00:00Z" },
+  { id: "mat2", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Consumo", item: "Aço CA-50 Ø 12,5mm", quantidade: 2.5, unidade: "ton", valor_unitario: 4800, valor_total: 12000, previsto_em_orcamento: true, gera_alerta_desequilibrio: false, created_at: "2026-03-01T09:00:00Z" },
+  // rdo2
+  { id: "mat3", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Compra", item: "Madeira para formas (pinus)", quantidade: 120, unidade: "m²", valor_unitario: 45, valor_total: 5400, previsto_em_orcamento: true, gera_alerta_desequilibrio: false, created_at: "2026-02-28T08:00:00Z" },
+  // rdo3
+  { id: "mat4", rdo_dia_id: "rdo3", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Aluguel", item: "Bomba submersível", quantidade: 1, unidade: "diária", valor_unitario: 850, valor_total: 850, previsto_em_orcamento: false, gera_alerta_desequilibrio: true, created_at: "2026-02-27T11:00:00Z" },
+  // rdo4
+  { id: "mat5", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Aluguel", item: "Perfuratriz rotativa", quantidade: 1, unidade: "diária", valor_unitario: 3200, valor_total: 3200, previsto_em_orcamento: true, gera_alerta_desequilibrio: false, created_at: "2026-03-02T08:00:00Z" },
+  { id: "mat6", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Consumo", item: "Brocas de tungstênio", quantidade: 4, unidade: "un", valor_unitario: 1200, valor_total: 4800, previsto_em_orcamento: false, gera_alerta_desequilibrio: true, created_at: "2026-03-02T10:00:00Z" },
+  // rdo5
+  { id: "mat7", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Consumo", item: "Concreto fck 40 MPa", quantidade: 30, unidade: "m³", valor_unitario: 380, valor_total: 11400, previsto_em_orcamento: true, gera_alerta_desequilibrio: false, created_at: "2026-02-28T09:00:00Z" },
+  // rdo6
+  { id: "mat8", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Consumo", item: "Blocos cerâmicos 14x19x39", quantidade: 2000, unidade: "un", valor_unitario: 2.8, valor_total: 5600, previsto_em_orcamento: true, gera_alerta_desequilibrio: false, created_at: "2026-03-01T08:00:00Z" },
+  { id: "mat9", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", tipo: "Consumo", item: "Argamassa industrializada", quantidade: 80, unidade: "saco", valor_unitario: 28, valor_total: 2240, previsto_em_orcamento: true, gera_alerta_desequilibrio: false, created_at: "2026-03-01T09:00:00Z" },
+];
+
+export const DEMO_OCORRENCIAS = [
+  // rdo3 – dia chuvoso
+  { id: "oc1", rdo_dia_id: "rdo3", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Clima", descricao: "Chuva forte das 7h às 11h — impossibilitou trabalho a céu aberto.", impacto: "alto", responsavel: null, gera_risco_contratual: true, gera_alerta: true, created_at: "2026-02-27T11:00:00Z" },
+  { id: "oc2", rdo_dia_id: "rdo3", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Logística", descricao: "Acúmulo de água na escavação — necessário bombeamento.", impacto: "médio", responsavel: "Eng. Marcos", gera_risco_contratual: false, gera_alerta: false, created_at: "2026-02-27T12:00:00Z" },
+  // rdo4
+  { id: "oc3", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Técnica", descricao: "Presença de matacão rochoso não previsto em sondagem. Necessário replanejamento de estacas.", impacto: "crítico", responsavel: "Eng. Paula", gera_risco_contratual: true, gera_alerta: true, created_at: "2026-03-02T10:00:00Z" },
+  // rdo5
+  { id: "oc4", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Técnica", descricao: "Nível do rio acima do esperado — cota de fundação comprometida.", impacto: "alto", responsavel: "Eng. Carlos", gera_risco_contratual: true, gera_alerta: true, created_at: "2026-02-28T08:00:00Z" },
+  { id: "oc5", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Fornecedor", descricao: "Atraso na entrega de tirantes de ancoragem — previsão reprogramada para 05/03.", impacto: "médio", responsavel: "Compras", gera_risco_contratual: false, gera_alerta: false, created_at: "2026-02-28T14:00:00Z" },
+];

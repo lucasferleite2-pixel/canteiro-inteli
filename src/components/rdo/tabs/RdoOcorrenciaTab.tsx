@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Plus, Loader2, Trash2, ShieldAlert, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { DEMO_OCORRENCIAS } from "@/lib/demoData";
 
 const tiposOcorrencia = ["Clima", "Logística", "Técnica", "Fornecedor", "Planejamento", "Fiscalização"];
 const impactoOptions = [
@@ -34,6 +36,7 @@ interface Props {
 
 export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { toast } = useToast();
+  const { isDemo } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ tipo: "Técnica", descricao: "", impacto: "baixo", responsavel: "", risco_contratual: false });
@@ -41,6 +44,7 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { data: ocorrencias = [], isLoading } = useQuery({
     queryKey: ["rdo_ocorrencia", rdoDiaId],
     queryFn: async () => {
+      if (isDemo) return DEMO_OCORRENCIAS.filter((o) => o.rdo_dia_id === rdoDiaId);
       const { data, error } = await supabase
         .from("rdo_ocorrencia")
         .select("*")
