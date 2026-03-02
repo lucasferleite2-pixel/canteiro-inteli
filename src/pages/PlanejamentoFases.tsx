@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Loader2, Target, Trash2, Pencil } from "lucide-react";
+import { Plus, Loader2, Target, Trash2, Pencil, FileDown } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ import { DEMO_OBRAS, DEMO_FASE_PLANEJAMENTO } from "@/lib/demoData";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { generatePlanejamentoPdf } from "@/lib/planejamentoPdfGenerator";
 
 const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento", "Pavimentação", "Demolição"];
 const unidadeOptions = ["m²", "m³", "metro linear", "unidade", "ton", "kg"];
@@ -157,10 +158,24 @@ export default function PlanejamentoFases() {
           </Select>
         </div>
         {selectedObraId && (
-          <div className="pt-5">
+          <div className="pt-5 flex gap-2">
             <Button onClick={() => setDialogOpen(true)} disabled={isDemo}>
               <Plus className="mr-2 h-4 w-4" />Nova Fase
             </Button>
+            {resolvedFases.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  generatePlanejamentoPdf({
+                    obraName: selectedObra?.name || "",
+                    obraBudget: selectedObra?.budget || 0,
+                    fases: resolvedFases,
+                  })
+                }
+              >
+                <FileDown className="mr-2 h-4 w-4" />Exportar PDF
+              </Button>
+            )}
           </div>
         )}
       </div>
