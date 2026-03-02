@@ -6,9 +6,10 @@ import { DashboardKpiCards } from "@/components/dashboard/DashboardKpiCards";
 import { DashboardProjectsTable } from "@/components/dashboard/DashboardProjectsTable";
 import { DashboardAlerts } from "@/components/dashboard/DashboardAlerts";
 import { DashboardFinancialChart } from "@/components/dashboard/DashboardFinancialChart";
+import { DEMO_KPI, DEMO_PROJECTS, DEMO_ALERTS, DEMO_FINANCIAL_CHART } from "@/lib/demoData";
 
 export default function Dashboard() {
-  const { companyId } = useAuth();
+  const { companyId, isDemo } = useAuth();
 
   // ── KPI data ──
   const { data: kpi, isLoading } = useQuery({
@@ -43,7 +44,7 @@ export default function Dashboard() {
         avgProductivity: avgProd,
       };
     },
-    enabled: !!companyId,
+    enabled: !!companyId && !isDemo,
   });
 
   // ── Projects with RDO aggregates ──
@@ -84,7 +85,7 @@ export default function Dashboard() {
         };
       });
     },
-    enabled: !!companyId,
+    enabled: !!companyId && !isDemo,
   });
 
   // ── Alerts ──
@@ -111,7 +112,7 @@ export default function Dashboard() {
         project_name: a.project_id ? projectNames.get(a.project_id) : undefined,
       }));
     },
-    enabled: !!companyId,
+    enabled: !!companyId && !isDemo,
   });
 
   // ── Financial by project ──
@@ -140,10 +141,16 @@ export default function Dashboard() {
         .sort((a, b) => (b.receita + b.despesa) - (a.receita + a.despesa))
         .slice(0, 8);
     },
-    enabled: !!companyId,
+    enabled: !!companyId && !isDemo,
   });
 
-  if (isLoading) {
+  // Use demo data when in demo mode
+  const resolvedKpi = isDemo ? DEMO_KPI : kpi;
+  const resolvedProjects = isDemo ? DEMO_PROJECTS : projectRows;
+  const resolvedAlerts = isDemo ? DEMO_ALERTS : alerts;
+  const resolvedFinancial = isDemo ? DEMO_FINANCIAL_CHART : financialChart;
+
+  if (!isDemo && isLoading) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -158,13 +165,13 @@ export default function Dashboard() {
         <p className="text-muted-foreground text-sm">Visão consolidada de obras, finanças e alertas.</p>
       </div>
 
-      {kpi && <DashboardKpiCards data={kpi} />}
+      {resolvedKpi && <DashboardKpiCards data={resolvedKpi} />}
 
-      <DashboardProjectsTable projects={projectRows} />
+      <DashboardProjectsTable projects={resolvedProjects} />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <DashboardFinancialChart data={financialChart} />
-        <DashboardAlerts alerts={alerts} />
+        <DashboardFinancialChart data={resolvedFinancial} />
+        <DashboardAlerts alerts={resolvedAlerts} />
       </div>
     </div>
   );
