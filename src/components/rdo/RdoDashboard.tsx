@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { RdoPerformanceTab } from "./tabs/RdoPerformanceTab";
 import { RdoProjectionPanel } from "./RdoProjectionPanel";
+import { RdoCorrectiveActionsPanel } from "./RdoCorrectiveActionsPanel";
 import {
   TrendingUp,
   DollarSign,
@@ -32,11 +33,13 @@ import {
 
 interface RdoDashboardProps {
   rdos: any[];
+  despesas?: any[];
   obraId?: string;
   companyId?: string;
+  obraOrcamento?: number;
 }
 
-export function RdoDashboard({ rdos, obraId, companyId }: RdoDashboardProps) {
+export function RdoDashboard({ rdos, despesas = [], obraId, companyId, obraOrcamento }: RdoDashboardProps) {
   const stats = useMemo(() => {
     if (!rdos.length) return null;
 
@@ -363,6 +366,11 @@ export function RdoDashboard({ rdos, obraId, companyId }: RdoDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Corrective Actions */}
+      {obraId && companyId && (
+        <RdoCorrectiveActionsPanel obraId={obraId} companyId={companyId} rdos={rdos} despesas={despesas} obraOrcamento={obraOrcamento} />
+      )}
 
       {/* Predictive Analysis */}
       {obraId && companyId && (

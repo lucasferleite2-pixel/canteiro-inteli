@@ -483,6 +483,69 @@ export type Database = {
           },
         ]
       }
+      obra_acao_corretiva: {
+        Row: {
+          analise_tecnica: string
+          company_id: string
+          created_at: string
+          decidido_em: string | null
+          decidido_por: string | null
+          fase: string | null
+          id: string
+          impacto_estimado: number | null
+          motivo: string
+          nivel_urgencia: string
+          obra_id: string
+          status: string
+          tipo_acao: string
+        }
+        Insert: {
+          analise_tecnica: string
+          company_id: string
+          created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          fase?: string | null
+          id?: string
+          impacto_estimado?: number | null
+          motivo: string
+          nivel_urgencia: string
+          obra_id: string
+          status?: string
+          tipo_acao: string
+        }
+        Update: {
+          analise_tecnica?: string
+          company_id?: string
+          created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          fase?: string | null
+          id?: string
+          impacto_estimado?: number | null
+          motivo?: string
+          nivel_urgencia?: string
+          obra_id?: string
+          status?: string
+          tipo_acao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_acao_corretiva_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_acao_corretiva_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_fase_planejamento: {
         Row: {
           company_id: string
