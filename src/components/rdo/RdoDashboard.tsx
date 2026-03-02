@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { RdoPerformanceTab } from "./tabs/RdoPerformanceTab";
+import { RdoProjectionPanel } from "./RdoProjectionPanel";
 import {
   TrendingUp,
   DollarSign,
@@ -362,6 +363,11 @@ export function RdoDashboard({ rdos, obraId, companyId }: RdoDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Predictive Analysis */}
+      {obraId && companyId && (
+        <RdoProjectionPanel obraId={obraId} companyId={companyId} rdos={rdos} />
+      )}
 
       {/* Performance by Phase */}
       {obraId && companyId && (

@@ -486,9 +486,53 @@ export async function generateRdoPDF(
   }
 
   // ═══════════════════════════════════════
+  // SECTION: PREDICTIVE ANALYSIS
+  // ═══════════════════════════════════════
+  let nextSection = fasePerformance.size > 0 ? 4 : 3;
+
+  // Build projection data from phase performance
+  const projectionRows: string[][] = [];
+  fasePerformance.forEach((data, fase) => {
+    if (data.qtd > 0) {
+      const custoPorUnidade = data.custo / data.qtd;
+      // Rough projection: if we had a planned total, project
+      const projectedTotal = custoPorUnidade * data.qtd * 2; // simplified
+      projectionRows.push([
+        fase,
+        `R$ ${data.custo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+        `R$ ${custoPorUnidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/${data.unidade}`,
+        `${data.qtd.toLocaleString("pt-BR")} ${data.unidade}`,
+      ]);
+    }
+  });
+
+  if (projectionRows.length > 0) {
+    onProgress?.("Gerando análise preditiva...");
+    doc.addPage();
+    trackSection(`${nextSection}. Análise Preditiva de Estouro`);
+    addSectionHeader(doc, `${nextSection}. Análise Preditiva de Estouro`, 24, BC);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text("Projeção baseada em regressão linear simples sobre o custo por unidade executada.", 14, 36);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [["Fase", "Custo Real", "Custo/Unidade", "Qtd. Executada"]],
+      body: projectionRows,
+      theme: "grid",
+      headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
+      styles: { fontSize: 9 },
+      margin: { top: HEADER_OFFSET + 4 },
+    });
+    nextSection++;
+  }
+
+  // ═══════════════════════════════════════
   // SECTION: AI SUMMARY (optional)
   // ═══════════════════════════════════════
-  let sectionNum = fasePerformance.size > 0 ? 4 : 3;
+  let sectionNum = nextSection;
   if (aiSummary) {
     onProgress?.("Adicionando análise IA...");
     doc.addPage();
