@@ -103,3 +103,36 @@ export const DEMO_OCORRENCIAS = [
   { id: "oc4", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Técnica", descricao: "Nível do rio acima do esperado — cota de fundação comprometida.", impacto: "alto", responsavel: "Eng. Carlos", gera_risco_contratual: true, gera_alerta: true, created_at: "2026-02-28T08:00:00Z" },
   { id: "oc5", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Fornecedor", descricao: "Atraso na entrega de tirantes de ancoragem — previsão reprogramada para 05/03.", impacto: "médio", responsavel: "Compras", gera_risco_contratual: false, gera_alerta: false, created_at: "2026-02-28T14:00:00Z" },
 ];
+
+export const DEMO_FINANCIAL_RECORDS = [
+  // Residencial Parque Verde (d1)
+  { id: "fin1", description: "1ª Medição — Fundações", amount: 420000, type: "income", category: "Medição", due_date: "2026-01-15", paid_at: "2026-01-18", project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-10T10:00:00Z" },
+  { id: "fin2", description: "Concreto fck 30 MPa — Jan", amount: 185000, type: "expense", category: "Material", due_date: "2026-01-20", paid_at: "2026-01-20", project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-12T08:00:00Z" },
+  { id: "fin3", description: "Mão de obra — Jan", amount: 96000, type: "expense", category: "Mão de Obra", due_date: "2026-02-05", paid_at: "2026-02-05", project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-31T18:00:00Z" },
+  { id: "fin4", description: "2ª Medição — Estrutura", amount: 630000, type: "income", category: "Medição", due_date: "2026-02-15", paid_at: "2026-02-17", project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-10T09:00:00Z" },
+  { id: "fin5", description: "Aço CA-50 — Fev", amount: 210000, type: "expense", category: "Material", due_date: "2026-02-18", paid_at: "2026-02-18", project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-12T14:00:00Z" },
+  { id: "fin6", description: "Mão de obra — Fev", amount: 102000, type: "expense", category: "Mão de Obra", due_date: "2026-03-05", paid_at: null, project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-28T18:00:00Z" },
+  { id: "fin7", description: "Aluguel de grua — Fev/Mar", amount: 45000, type: "expense", category: "Equipamento", due_date: "2026-03-10", paid_at: null, project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-25T10:00:00Z" },
+
+  // Edifício Comercial Centro (d2)
+  { id: "fin8", description: "1ª Medição — Terraplanagem", amount: 350000, type: "income", category: "Medição", due_date: "2026-01-20", paid_at: "2026-01-22", project_id: "d2", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-15T10:00:00Z" },
+  { id: "fin9", description: "Escavação e contenção", amount: 278000, type: "expense", category: "Serviço", due_date: "2026-01-25", paid_at: "2026-01-25", project_id: "d2", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-18T09:00:00Z" },
+  { id: "fin10", description: "Mão de obra — Jan", amount: 82000, type: "expense", category: "Mão de Obra", due_date: "2026-02-05", paid_at: "2026-02-05", project_id: "d2", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-31T18:00:00Z" },
+  { id: "fin11", description: "Sondagem complementar (extra)", amount: 35000, type: "expense", category: "Serviço", due_date: "2026-03-08", paid_at: null, project_id: "d2", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-03-02T11:00:00Z" },
+
+  // Ponte Rodoviária BR-040 (d3)
+  { id: "fin12", description: "Adiantamento contratual", amount: 560000, type: "income", category: "Adiantamento", due_date: "2025-12-15", paid_at: "2025-12-15", project_id: "d3", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2025-12-10T08:00:00Z" },
+  { id: "fin13", description: "Concreto fck 40 MPa — Jan", amount: 195000, type: "expense", category: "Material", due_date: "2026-01-20", paid_at: "2026-01-20", project_id: "d3", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-15T10:00:00Z" },
+  { id: "fin14", description: "Bombeamento emergencial", amount: 12000, type: "expense", category: "Equipamento", due_date: "2026-02-28", paid_at: "2026-03-01", project_id: "d3", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-28T14:00:00Z" },
+  { id: "fin15", description: "1ª Medição — Fundações", amount: 480000, type: "income", category: "Medição", due_date: "2026-02-20", paid_at: "2026-02-25", project_id: "d3", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-15T09:00:00Z" },
+  { id: "fin16", description: "Tirantes de ancoragem", amount: 88000, type: "expense", category: "Material", due_date: "2026-03-15", paid_at: null, project_id: "d3", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-03-01T10:00:00Z" },
+
+  // Escola Municipal Ipê (d4)
+  { id: "fin17", description: "1ª Medição — Alvenaria", amount: 180000, type: "income", category: "Medição", due_date: "2026-02-10", paid_at: "2026-02-12", project_id: "d4", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-05T10:00:00Z" },
+  { id: "fin18", description: "Blocos cerâmicos", amount: 42000, type: "expense", category: "Material", due_date: "2026-02-08", paid_at: "2026-02-08", project_id: "d4", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-02-03T08:00:00Z" },
+  { id: "fin19", description: "Estrutura metálica cobertura quadra", amount: 95000, type: "expense", category: "Material", due_date: "2026-03-12", paid_at: null, project_id: "d4", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-03-01T14:00:00Z" },
+
+  // Galpão Industrial Sul (d5 — concluída)
+  { id: "fin20", description: "Medição final", amount: 240000, type: "income", category: "Medição", due_date: "2026-01-15", paid_at: "2026-01-18", project_id: "d5", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-10T10:00:00Z" },
+  { id: "fin21", description: "Acabamento e pintura", amount: 68000, type: "expense", category: "Serviço", due_date: "2026-01-10", paid_at: "2026-01-10", project_id: "d5", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-05T09:00:00Z" },
+];
