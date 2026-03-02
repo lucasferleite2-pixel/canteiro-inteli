@@ -55,6 +55,20 @@ export default function PlanejamentoFases() {
     enabled: !!companyId && !isDemo,
   });
 
+  const { data: company } = useQuery({
+    queryKey: ["company", companyId],
+    queryFn: async () => {
+      if (!companyId) return null;
+      const { data } = await supabase
+        .from("companies")
+        .select("name, logo_url")
+        .eq("id", companyId)
+        .single();
+      return data;
+    },
+    enabled: !!companyId && !isDemo,
+  });
+
   const resolvedObras = isDemo ? DEMO_OBRAS : obras;
 
   const { data: fases = [], isLoading } = useQuery({
@@ -170,6 +184,8 @@ export default function PlanejamentoFases() {
                     obraName: selectedObra?.name || "",
                     obraBudget: selectedObra?.budget || 0,
                     fases: resolvedFases,
+                    companyName: company?.name || undefined,
+                    companyLogoUrl: company?.logo_url || undefined,
                   })
                 }
               >

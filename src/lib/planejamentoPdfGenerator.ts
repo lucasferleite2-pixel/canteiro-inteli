@@ -37,30 +37,58 @@ interface PlanejamentoPdfParams {
   obraBudget: number;
   fases: FasePlanejamento[];
   companyName?: string;
+  companyLogoUrl?: string;
 }
 
-export function generatePlanejamentoPdf({ obraName, obraBudget, fases, companyName }: PlanejamentoPdfParams) {
+export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, companyName, companyLogoUrl }: PlanejamentoPdfParams) {
   const doc = new jsPDF("p", "mm", "a4");
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 14;
   let y = margin;
 
+  // ── Load logo if available ──
+  let logoImg: HTMLImageElement | null = null;
+  if (companyLogoUrl) {
+    try {
+      logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = companyLogoUrl;
+      });
+    } catch {
+      logoImg = null;
+    }
+  }
+
   // ── Header ──
+  const headerH = 32;
   doc.setFillColor(...BLUE);
-  doc.rect(0, 0, pageW, 32, "F");
+  doc.rect(0, 0, pageW, headerH, "F");
+
+  let textStartX = margin;
+  if (logoImg) {
+    const logoH = 18;
+    const logoW = (logoImg.width / logoImg.height) * logoH;
+    const logoY = (headerH - logoH) / 2;
+    doc.addImage(logoImg, "PNG", margin, logoY, logoW, logoH);
+    textStartX = margin + logoW + 4;
+  }
+
   doc.setTextColor(...WHITE);
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("Relatório de Planejamento por Fase", margin, 14);
+  doc.text("Relatório de Planejamento por Fase", textStartX, 14);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(obraName, margin, 22);
+  doc.text(obraName, textStartX, 22);
   doc.text(format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), pageW - margin, 22, { align: "right" });
   if (companyName) {
     doc.text(companyName, pageW - margin, 14, { align: "right" });
   }
 
-  y = 40;
+  y = headerH + 8;
 
   // ── KPI Cards ──
   const totalPlanejado = fases.reduce((s, f) => s + f.custo_planejado, 0);
