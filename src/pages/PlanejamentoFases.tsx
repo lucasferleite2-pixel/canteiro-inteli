@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Loader2, Target, Trash2, Pencil } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_OBRAS, DEMO_FASE_PLANEJAMENTO } from "@/lib/demoData";
@@ -207,26 +207,59 @@ export default function PlanejamentoFases() {
           )}
 
           {resolvedFases.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Distribuição de Custo por Fase</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={resolvedFases.map((f) => ({ fase: f.fase, custo: f.custo_planejado }))} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="fase" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
-                    <YAxis tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Fase: ${l}`} />
-                    <Bar dataKey="custo" name="Custo Planejado" radius={[4, 4, 0, 0]}>
-                      {resolvedFases.map((_, i) => (
-                        <Cell key={i} className="fill-primary" />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Custo por Fase</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={resolvedFases.map((f) => ({ fase: f.fase, custo: f.custo_planejado }))} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="fase" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                      <YAxis tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                      <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Fase: ${l}`} />
+                      <Bar dataKey="custo" name="Custo Planejado" radius={[4, 4, 0, 0]}>
+                        {resolvedFases.map((_, i) => (
+                          <Cell key={i} className="fill-primary" />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Proporção por Fase (%)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={resolvedFases.map((f) => ({
+                          name: f.fase,
+                          value: f.custo_planejado,
+                          percent: totalPlanejado > 0 ? ((f.custo_planejado / totalPlanejado) * 100).toFixed(1) : 0,
+                        }))}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        label={({ name, percent }) => `${name}: ${percent}%`}
+                      >
+                        {resolvedFases.map((_, i) => {
+                          const colors = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(210,70%,50%)", "hsl(150,60%,45%)", "hsl(30,80%,55%)", "hsl(0,65%,50%)", "hsl(270,50%,55%)", "hsl(190,60%,45%)"];
+                          return <Cell key={i} fill={colors[i % colors.length]} />;
+                        })}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           <Card>
