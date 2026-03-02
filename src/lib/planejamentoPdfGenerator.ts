@@ -118,6 +118,76 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
 
   y += 28;
 
+  // ── Resumo Executivo ──
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Resumo Executivo", margin, y);
+  y += 5;
+
+  const coberturaNum = parseFloat(cobertura);
+  const saldo = obraBudget - totalPlanejado;
+  const faseMaisCara = fases.length > 0
+    ? [...fases].sort((a, b) => b.custo_planejado - a.custo_planejado)[0]
+    : null;
+  const faseMaisBarata = fases.length > 1
+    ? [...fases].sort((a, b) => a.custo_planejado - b.custo_planejado)[0]
+    : null;
+
+  let statusLabel: string;
+  let statusColor: [number, number, number];
+  if (coberturaNum > 100) {
+    statusLabel = "ACIMA DO ORÇAMENTO";
+    statusColor = [239, 68, 68];
+  } else if (coberturaNum >= 80) {
+    statusLabel = "ATENÇÃO";
+    statusColor = [245, 158, 11];
+  } else {
+    statusLabel = "DENTRO DO ORÇAMENTO";
+    statusColor = [16, 185, 129];
+  }
+
+  doc.setFillColor(...statusColor);
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "bold");
+  const badgeW = doc.getTextWidth(statusLabel) + 8;
+  doc.roundedRect(margin, y, badgeW, 6, 1.5, 1.5, "F");
+  doc.setTextColor(...WHITE);
+  doc.text(statusLabel, margin + 4, y + 4.2);
+  y += 10;
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(50, 50, 50);
+  const contentW = pageW - margin * 2;
+
+  const summaryLines: string[] = [];
+  summaryLines.push(
+    `O planejamento atual contempla ${fases.length} fase(s) com custo total de ${formatCurrency(totalPlanejado)}, ` +
+    `representando ${cobertura}% do orçamento previsto de ${formatCurrency(obraBudget)}.`
+  );
+  if (saldo >= 0) {
+    summaryLines.push(`Saldo disponível: ${formatCurrency(saldo)} (${(100 - coberturaNum).toFixed(1)}% do orçamento).`);
+  } else {
+    summaryLines.push(`Excedente orçamentário: ${formatCurrency(Math.abs(saldo))} (${(coberturaNum - 100).toFixed(1)}% acima do previsto).`);
+  }
+  if (faseMaisCara) {
+    const peso = totalPlanejado > 0 ? ((faseMaisCara.custo_planejado / totalPlanejado) * 100).toFixed(1) : "0";
+    summaryLines.push(`Fase de maior impacto: "${faseMaisCara.fase}" com ${formatCurrency(faseMaisCara.custo_planejado)} (${peso}% do total).`);
+  }
+  if (faseMaisBarata) {
+    const peso = totalPlanejado > 0 ? ((faseMaisBarata.custo_planejado / totalPlanejado) * 100).toFixed(1) : "0";
+    summaryLines.push(`Fase de menor impacto: "${faseMaisBarata.fase}" com ${formatCurrency(faseMaisBarata.custo_planejado)} (${peso}% do total).`);
+  }
+
+  summaryLines.forEach((line) => {
+    const split = doc.splitTextToSize(line, contentW) as string[];
+    split.forEach((s: string) => { doc.text(s, margin, y); y += 4.2; });
+    y += 1;
+  });
+
+  y += 6;
+
   // ── Table ──
   doc.setTextColor(30, 30, 30);
   doc.setFontSize(11);
