@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Plus, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { DEMO_MATERIAIS } from "@/lib/demoData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const tiposMaterial = ["Compra", "Aluguel", "Consumo"];
@@ -21,6 +23,7 @@ interface Props {
 
 export function RdoMaterialTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { toast } = useToast();
+  const { isDemo } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ tipo: "Consumo", item: "", quantidade: "", unidade: "un", valor_unitario: "", previsto: true });
@@ -28,6 +31,7 @@ export function RdoMaterialTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { data: materiais = [], isLoading } = useQuery({
     queryKey: ["rdo_material", rdoDiaId],
     queryFn: async () => {
+      if (isDemo) return DEMO_MATERIAIS.filter((m) => m.rdo_dia_id === rdoDiaId);
       const { data, error } = await supabase
         .from("rdo_material")
         .select("*")

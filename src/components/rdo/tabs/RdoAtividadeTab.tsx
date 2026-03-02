@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { DEMO_ATIVIDADES } from "@/lib/demoData";
 
 const tiposAtividade = ["Execução", "Logística", "Compra", "Planejamento", "Fiscalização"];
 const impactoCronograma = [
@@ -25,6 +27,7 @@ interface Props {
 
 export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { toast } = useToast();
+  const { isDemo } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [desc, setDesc] = useState("");
@@ -34,6 +37,7 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ["rdo_atividade", rdoDiaId],
     queryFn: async () => {
+      if (isDemo) return DEMO_ATIVIDADES.filter((a) => a.rdo_dia_id === rdoDiaId);
       const { data, error } = await supabase
         .from("rdo_atividade")
         .select("*")

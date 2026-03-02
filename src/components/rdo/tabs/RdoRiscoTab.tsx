@@ -4,6 +4,8 @@ import { Loader2, ShieldAlert, TrendingDown, AlertTriangle, DollarSign, Activity
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/useAuth";
+import { DEMO_OCORRENCIAS, DEMO_MATERIAIS } from "@/lib/demoData";
 
 interface Props {
   rdoDiaId: string;
@@ -18,9 +20,12 @@ interface Props {
 }
 
 export function RdoRiscoTab({ rdoDiaId, companyId, rdo }: Props) {
+  const { isDemo } = useAuth();
+
   const { data: ocorrencias = [], isLoading: loadingOc } = useQuery({
     queryKey: ["rdo_ocorrencia", rdoDiaId],
     queryFn: async () => {
+      if (isDemo) return DEMO_OCORRENCIAS.filter((o) => o.rdo_dia_id === rdoDiaId);
       const { data, error } = await supabase
         .from("rdo_ocorrencia")
         .select("*")
@@ -33,6 +38,7 @@ export function RdoRiscoTab({ rdoDiaId, companyId, rdo }: Props) {
   const { data: materiais = [], isLoading: loadingMat } = useQuery({
     queryKey: ["rdo_material", rdoDiaId],
     queryFn: async () => {
+      if (isDemo) return DEMO_MATERIAIS.filter((m) => m.rdo_dia_id === rdoDiaId);
       const { data, error } = await supabase
         .from("rdo_material")
         .select("*")
