@@ -9,7 +9,7 @@ import {
   Sun, Cloud, CloudRain, CloudLightning, CloudSnow,
   Users, ChevronDown, ChevronRight, Pencil, Trash2,
   Lock, LockOpen, TrendingUp, AlertTriangle, DollarSign,
-  Activity, Package, AlertCircle, Camera, ShieldAlert, Loader2, Receipt,
+  Activity, Package, AlertCircle, Camera, ShieldAlert, Loader2, Receipt, Ruler,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,6 +62,8 @@ interface RdoDia {
   observacoes_gerais: string | null;
   criado_por: string;
   is_locked: boolean;
+  quantidade_executada?: number;
+  unidade_medicao?: string;
 }
 
 interface Props {
@@ -174,6 +176,11 @@ export function RdoSmartCard({ rdo, companyId, canModify, isAuthor, onEdit, onDe
               </Badge>
               {rdo.fase_obra && (
                 <Badge variant="outline" className="text-xs">{rdo.fase_obra}</Badge>
+              )}
+              {(rdo.quantidade_executada ?? 0) > 0 && (
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <Ruler className="h-3 w-3" /> {rdo.quantidade_executada} {rdo.unidade_medicao || "m²"}
+                </Badge>
               )}
             </div>
           </CardHeader>

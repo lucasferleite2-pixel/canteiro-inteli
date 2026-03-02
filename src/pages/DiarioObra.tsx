@@ -302,7 +302,7 @@ export default function DiarioObra() {
 
       {/* KPI Dashboard */}
       {selectedProject && filteredRdos.length > 0 && (
-        <RdoDashboard rdos={filteredRdos} />
+        <RdoDashboard rdos={filteredRdos} obraId={selectedProject} companyId={companyId || undefined} />
       )}
 
       {/* New RDO Dialog */}

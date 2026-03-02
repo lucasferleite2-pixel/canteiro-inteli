@@ -447,9 +447,48 @@ export async function generateRdoPDF(
   }
 
   // ═══════════════════════════════════════
+  // SECTION: PERFORMANCE BY PHASE
+  // ═══════════════════════════════════════
+  const fasePerformance = new Map<string, { qtd: number; custo: number; unidade: string }>();
+  sorted.forEach((r) => {
+    const fase = r.fase_obra || "Sem fase";
+    if (!fasePerformance.has(fase)) fasePerformance.set(fase, { qtd: 0, custo: 0, unidade: (r as any).unidade_medicao || "m²" });
+    const entry = fasePerformance.get(fase)!;
+    entry.qtd += Number((r as any).quantidade_executada || 0);
+    entry.custo += Number(r.custo_dia || 0);
+  });
+
+  if (fasePerformance.size > 0) {
+    onProgress?.("Gerando indicadores de performance...");
+    doc.addPage();
+    trackSection("3. Indicadores de Performance por Fase");
+    addSectionHeader(doc, "3. Indicadores de Performance por Fase", 24, BC);
+
+    const perfBody = Array.from(fasePerformance.entries()).map(([fase, data]) => {
+      const custoPorUnidade = data.qtd > 0 ? data.custo / data.qtd : 0;
+      return [
+        fase,
+        `${data.qtd.toLocaleString("pt-BR")} ${data.unidade}`,
+        `R$ ${data.custo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+        data.qtd > 0 ? `R$ ${custoPorUnidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/${data.unidade}` : "N/A",
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 38,
+      head: [["Fase", "Qtd. Executada", "Custo Acumulado", "Custo por Unidade"]],
+      body: perfBody,
+      theme: "grid",
+      headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
+      styles: { fontSize: 9 },
+      margin: { top: HEADER_OFFSET + 4 },
+    });
+  }
+
+  // ═══════════════════════════════════════
   // SECTION: AI SUMMARY (optional)
   // ═══════════════════════════════════════
-  let sectionNum = 3;
+  let sectionNum = fasePerformance.size > 0 ? 4 : 3;
   if (aiSummary) {
     onProgress?.("Adicionando análise IA...");
     doc.addPage();

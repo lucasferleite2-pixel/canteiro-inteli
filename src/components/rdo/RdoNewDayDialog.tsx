@@ -23,6 +23,8 @@ interface Props {
   editingRdo?: any;
 }
 
+const unidadeOptions = ["m²", "m³", "metro linear", "unidade", "ton", "kg"];
+
 const emptyForm = {
   data: new Date().toISOString().split("T")[0],
   clima: "Ensolarado",
@@ -35,6 +37,8 @@ const emptyForm = {
   produtividade_percentual: "0",
   risco_dia: "baixo",
   observacoes_gerais: "",
+  quantidade_executada: "0",
+  unidade_medicao: "m²",
 };
 
 export function RdoNewDayDialog({ open, onOpenChange, obraId, companyId, editingRdo }: Props) {
@@ -56,6 +60,8 @@ export function RdoNewDayDialog({ open, onOpenChange, obraId, companyId, editing
       produtividade_percentual: String(editingRdo.produtividade_percentual || 0),
       risco_dia: editingRdo.risco_dia || "baixo",
       observacoes_gerais: editingRdo.observacoes_gerais || "",
+      quantidade_executada: String(editingRdo.quantidade_executada || 0),
+      unidade_medicao: editingRdo.unidade_medicao || "m²",
     };
     return emptyForm;
   });
@@ -80,6 +86,8 @@ export function RdoNewDayDialog({ open, onOpenChange, obraId, companyId, editing
         produtividade_percentual: parseFloat(form.produtividade_percentual) || 0,
         risco_dia: form.risco_dia,
         observacoes_gerais: form.observacoes_gerais || null,
+        quantidade_executada: parseFloat(form.quantidade_executada) || 0,
+        unidade_medicao: form.unidade_medicao,
       };
 
       if (editingRdo) {
@@ -171,6 +179,22 @@ export function RdoNewDayDialog({ open, onOpenChange, obraId, companyId, editing
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {riscoOptions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Qtd. Executada no Dia</Label>
+              <Input type="number" min="0" step="0.01" value={form.quantidade_executada} onChange={(e) => update({ quantidade_executada: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Unidade de Medição</Label>
+              <Select value={form.unidade_medicao} onValueChange={(v) => update({ unidade_medicao: v })}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {unidadeOptions.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

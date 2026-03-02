@@ -483,6 +483,57 @@ export type Database = {
           },
         ]
       }
+      obra_fase_planejamento: {
+        Row: {
+          company_id: string
+          created_at: string
+          custo_planejado: number
+          fase: string
+          id: string
+          obra_id: string
+          quantidade_planejada: number
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          custo_planejado?: number
+          fase: string
+          id?: string
+          obra_id: string
+          quantidade_planejada?: number
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          custo_planejado?: number
+          fase?: string
+          id?: string
+          obra_id?: string
+          quantidade_planejada?: number
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_fase_planejamento_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_fase_planejamento_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -767,7 +818,9 @@ export type Database = {
           percentual_fisico_acumulado: number | null
           percentual_fisico_dia: number | null
           produtividade_percentual: number | null
+          quantidade_executada: number | null
           risco_dia: string | null
+          unidade_medicao: string | null
           updated_at: string
           version: number | null
         }
@@ -789,7 +842,9 @@ export type Database = {
           percentual_fisico_acumulado?: number | null
           percentual_fisico_dia?: number | null
           produtividade_percentual?: number | null
+          quantidade_executada?: number | null
           risco_dia?: string | null
+          unidade_medicao?: string | null
           updated_at?: string
           version?: number | null
         }
@@ -811,7 +866,9 @@ export type Database = {
           percentual_fisico_acumulado?: number | null
           percentual_fisico_dia?: number | null
           produtividade_percentual?: number | null
+          quantidade_executada?: number | null
           risco_dia?: string | null
+          unidade_medicao?: string | null
           updated_at?: string
           version?: number | null
         }
