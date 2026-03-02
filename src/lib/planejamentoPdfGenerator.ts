@@ -41,11 +41,22 @@ interface PlanejamentoPdfParams {
   companyLogoUrl?: string;
 }
 
+interface TocEntry {
+  title: string;
+  page: number;
+}
+
 export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, companyName, companyLogoUrl }: PlanejamentoPdfParams) {
   const doc = new jsPDF("p", "mm", "a4");
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 14;
   let y = margin;
+
+  // Section tracking for TOC
+  const tocEntries: TocEntry[] = [];
+  function trackSection(title: string) {
+    tocEntries.push({ title, page: doc.getNumberOfPages() });
+  }
 
   // ── Load logo if available ──
   let logoImg: HTMLImageElement | null = null;
@@ -63,7 +74,9 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     }
   }
 
-  // ── Header ──
+  // ══════════════════════════════════════════
+  // PAGE 1: HEADER + KPIs
+  // ══════════════════════════════════════════
   const headerH = 32;
   doc.setFillColor(...BLUE);
   doc.rect(0, 0, pageW, headerH, "F");
@@ -91,7 +104,7 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
 
   y = headerH + 8;
 
-  // ── KPI Cards ──
+  // KPI Cards
   const totalPlanejado = fases.reduce((s, f) => s + f.custo_planejado, 0);
   const cobertura = obraBudget > 0 ? ((totalPlanejado / obraBudget) * 100).toFixed(1) : "0.0";
 
@@ -119,12 +132,33 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
 
   y += 28;
 
-  // ── Resumo Executivo ──
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(11);
+  // ══════════════════════════════════════════
+  // PAGE 2: SUMÁRIO (placeholder – drawn later)
+  // ══════════════════════════════════════════
+  doc.addPage();
+  const tocPageNum = doc.getNumberOfPages();
+
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("Resumo Executivo", margin, y);
-  y += 5;
+  doc.setTextColor(...BLUE);
+  doc.text("Sumário", margin, 24);
+  doc.setDrawColor(...BLUE);
+  doc.setLineWidth(0.6);
+  doc.line(margin, 28, 60, 28);
+  // Actual TOC entries drawn at the end
+
+  // ══════════════════════════════════════════
+  // SECTION: Resumo Executivo
+  // ══════════════════════════════════════════
+  doc.addPage();
+  y = margin + 4;
+  trackSection("1. Resumo Executivo");
+
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("1. Resumo Executivo", margin, y);
+  y += 7;
 
   const coberturaNum = parseFloat(cobertura);
   const saldo = obraBudget - totalPlanejado;
@@ -187,13 +221,16 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     y += 1;
   });
 
-  y += 6;
+  // ══════════════════════════════════════════
+  // SECTION: Fases Cadastradas (Table)
+  // ══════════════════════════════════════════
+  y += 10;
+  trackSection("2. Fases Cadastradas");
 
-  // ── Table ──
   doc.setTextColor(30, 30, 30);
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Fases Cadastradas", margin, y);
+  doc.text("2. Fases Cadastradas", margin, y);
   y += 4;
 
   autoTable(doc, {
@@ -215,25 +252,28 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
 
   y = (doc as any).lastAutoTable.finalY + 10;
 
-  // ── Check page space for charts ──
+  // ══════════════════════════════════════════
+  // SECTION: Charts
+  // ══════════════════════════════════════════
   if (y > 200) {
     doc.addPage();
-    y = margin;
+    y = margin + 4;
   }
 
-  // ── Bar Chart (drawn manually) ──
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Distribuição de Custo por Fase", margin, y);
-  y += 6;
+  trackSection("3. Distribuição de Custos");
 
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("3. Distribuição de Custos", margin, y);
+  y += 8;
+
+  // Bar Chart
   const chartX = margin;
   const chartW = (pageW - margin * 2) * 0.55;
   const chartH = 60;
   const maxCusto = Math.max(...fases.map((f) => f.custo_planejado), 1);
 
-  // Y axis labels
   doc.setFontSize(6);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
@@ -246,7 +286,6 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     doc.line(chartX + 18, ly, chartX + chartW, ly);
   }
 
-  // Bars
   const barAreaX = chartX + 20;
   const barAreaW = chartW - 22;
   const barW = Math.min(barAreaW / fases.length - 4, 20);
@@ -266,7 +305,7 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     doc.text(f.fase, bx + barW / 2, y + chartH + 4, { align: "center" });
   });
 
-  // ── Pie Chart (drawn manually) ──
+  // Pie Chart
   const pieX = margin + chartW + 15;
   const pieCx = pieX + (pageW - margin - pieX) / 2;
   const pieCy = y + chartH / 2;
@@ -283,7 +322,6 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     const endAngle = startAngle + proportion * 2 * Math.PI;
     const color = CHART_COLORS[i % CHART_COLORS.length];
 
-    // Draw pie slice using filled triangle approximation
     doc.setFillColor(...color);
     const steps = Math.max(Math.ceil(proportion * 60), 2);
     for (let s = 0; s < steps; s++) {
@@ -296,7 +334,6 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
       doc.triangle(pieCx, pieCy, x1, y1, x2, y2, "F");
     }
 
-    // Label
     const midAngle = (startAngle + endAngle) / 2;
     const lx = pieCx + (pieR + 8) * Math.cos(midAngle);
     const ly = pieCy + (pieR + 8) * Math.sin(midAngle);
@@ -321,7 +358,38 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     legendY += 5;
   });
 
-  // ── Generate QR Code ──
+  // ══════════════════════════════════════════
+  // DRAW TOC WITH PAGE NUMBERS (retroactive)
+  // ══════════════════════════════════════════
+  doc.setPage(tocPageNum);
+  let tocY = 38;
+  const tocLeft = 20;
+  const tocRight = pageW - 20;
+
+  doc.setFontSize(10);
+  for (const entry of tocEntries) {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40, 40, 40);
+    doc.text(entry.title, tocLeft, tocY);
+
+    const titleW = doc.getTextWidth(entry.title);
+    const pageNumStr = String(entry.page);
+    const pageNumW = doc.getTextWidth(pageNumStr);
+    const dotsStart = tocLeft + titleW + 2;
+    const dotsEnd = tocRight - pageNumW - 2;
+    if (dotsEnd > dotsStart) {
+      doc.setTextColor(180, 180, 180);
+      const dotStr = ".".repeat(Math.floor((dotsEnd - dotsStart) / doc.getTextWidth(".")));
+      doc.text(dotStr, dotsStart, tocY);
+    }
+    doc.setTextColor(...BLUE);
+    doc.text(pageNumStr, tocRight, tocY, { align: "right" });
+    tocY += 10;
+  }
+
+  // ══════════════════════════════════════════
+  // QR CODE + FOOTER
+  // ══════════════════════════════════════════
   const qrPayload = JSON.stringify({
     doc: "planejamento",
     obra: obraName,
@@ -336,7 +404,6 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     qrDataUrl = null;
   }
 
-  // ── Footer with QR ──
   const pageCount = doc.getNumberOfPages();
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
