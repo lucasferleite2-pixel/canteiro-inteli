@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, ClipboardList, Loader2, Sparkles, FileDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { DEMO_OBRAS, DEMO_RDO_ENTRIES } from "@/lib/demoData";
 import { DiaryPdfFilterDialog, PdfFilters } from "@/components/diary/DiaryPdfFilterDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +22,7 @@ import { RdoNewDayDialog } from "@/components/rdo/RdoNewDayDialog";
 import { RdoDashboard } from "@/components/rdo/RdoDashboard";
 
 export default function DiarioObra() {
-  const { companyId, user } = useAuth();
+  const { companyId, user, isDemo } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedProject, setSelectedProject] = useState("");
@@ -41,8 +42,12 @@ export default function DiarioObra() {
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId,
+    enabled: !!companyId && !isDemo,
   });
+
+  const resolvedProjects = isDemo
+    ? DEMO_OBRAS.filter((o) => o.status === "in_progress").map((o) => ({ id: o.id, name: o.name, status: o.status }))
+    : projects;
 
   // Contracts (for PDF dialog)
   const { data: contracts = [] } = useQuery({
@@ -72,8 +77,12 @@ export default function DiarioObra() {
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId && !!selectedProject,
+    enabled: !!companyId && !!selectedProject && !isDemo,
   });
+
+  const resolvedRdos = isDemo
+    ? DEMO_RDO_ENTRIES.filter((r) => r.obra_id === selectedProject)
+    : rdos;
 
   // Legacy entries (for backward compat & PDF)
   const { data: legacyEntries = [] } = useQuery({
@@ -93,7 +102,7 @@ export default function DiarioObra() {
   });
 
   // Apply filters
-  const filteredRdos = rdos.filter((r: any) => {
+  const filteredRdos = resolvedRdos.filter((r: any) => {
     if (filters.dateFrom && r.data < filters.dateFrom.toISOString().split("T")[0]) return false;
     if (filters.dateTo && r.data > filters.dateTo.toISOString().split("T")[0]) return false;
     if (filters.fase && r.fase_obra !== filters.fase) return false;
@@ -115,10 +124,10 @@ export default function DiarioObra() {
   });
 
   const handleAISummary = () => {
-    const projectName = projects.find((p) => p.id === selectedProject)?.name || "Obra";
+    const projectName = resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra";
     // Combine RDO + legacy for AI summary
     const entries = legacyEntries;
-    if (entries.length === 0 && rdos.length === 0) {
+    if (entries.length === 0 && resolvedRdos.length === 0) {
       toast({ variant: "destructive", title: "Sem registros", description: "Adicione registros antes de gerar o resumo." });
       return;
     }
@@ -167,7 +176,7 @@ export default function DiarioObra() {
 
         await generateRdoPDF(
           {
-            projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
+            projectName: resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra",
             companyName: pdfFilters.companyName || undefined,
             companyAddress: pdfFilters.companyAddress || undefined,
             companyPhone: pdfFilters.companyPhone || undefined,
@@ -216,7 +225,7 @@ export default function DiarioObra() {
         } as any).eq("id", companyId!);
         await generateDiaryPDF(
           {
-            projectName: projects.find((p) => p.id === selectedProject)?.name || "Obra",
+            projectName: resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra",
             companyName: pdfFilters.companyName || undefined,
             companyAddress: pdfFilters.companyAddress || undefined,
             companyPhone: pdfFilters.companyPhone || undefined,
@@ -254,7 +263,7 @@ export default function DiarioObra() {
           <p className="text-muted-foreground text-sm">RDO 2.0 — Registro estruturado com indicadores de gestão.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {selectedProject && (legacyEntries.length > 0 || rdos.length > 0) && (
+          {selectedProject && (legacyEntries.length > 0 || resolvedRdos.length > 0) && (
             <>
               <Button variant="outline" size="sm" onClick={() => setShowPdfFilter(true)} disabled={pdfLoading}>
                 {pdfLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
@@ -278,13 +287,13 @@ export default function DiarioObra() {
         <Select value={selectedProject} onValueChange={(v) => { setSelectedProject(v); ai.clear(); setFilters(defaultFilters); }}>
           <SelectTrigger className="w-72"><SelectValue placeholder="Selecione uma obra" /></SelectTrigger>
           <SelectContent>
-            {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            {resolvedProjects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
       {/* Filters */}
-      {selectedProject && rdos.length > 0 && (
+      {selectedProject && resolvedRdos.length > 0 && (
         <RdoFilters filters={filters} onChange={setFilters} />
       )}
 
@@ -346,7 +355,7 @@ export default function DiarioObra() {
             <p className="text-sm text-muted-foreground/70">Escolha uma obra acima para visualizar ou criar registros diários.</p>
           </CardContent>
         </Card>
-      ) : isLoading ? (
+      ) : !isDemo && isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : filteredRdos.length === 0 && legacyEntries.length === 0 ? (
         <Card>

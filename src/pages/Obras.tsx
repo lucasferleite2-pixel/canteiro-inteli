@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Building2, MapPin, Calendar, DollarSign, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { DEMO_OBRAS } from "@/lib/demoData";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,7 +22,7 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 };
 
 export default function Obras() {
-  const { companyId } = useAuth();
+  const { companyId, isDemo } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -47,8 +48,10 @@ export default function Obras() {
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId,
+    enabled: !!companyId && !isDemo,
   });
+
+  const resolvedObras = isDemo ? DEMO_OBRAS : obras;
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -143,9 +146,9 @@ export default function Obras() {
         </Dialog>
       </div>
 
-      {isLoading ? (
+      {!isDemo && isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : obras.length === 0 ? (
+      ) : resolvedObras.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Building2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -158,7 +161,7 @@ export default function Obras() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {obras.map((obra) => {
+          {resolvedObras.map((obra) => {
             const st = statusMap[obra.status] || statusMap.planning;
             return (
               <Card key={obra.id} className="hover:border-primary/30 transition-colors">
