@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -17,6 +17,7 @@ interface AuthContextType {
   profile: Profile | null;
   companyId: string | null;
   loading: boolean;
+  isDemo: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -25,11 +26,37 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function isDemoMode() {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("demo") === "true";
+}
+
+const DEMO_COMPANY_ID = "00000000-0000-0000-0000-000000000000";
+
+const DEMO_USER = {
+  id: "demo-user-id",
+  email: "demo@exemplo.com",
+  app_metadata: {},
+  user_metadata: { full_name: "Usuário Demo" },
+  aud: "authenticated",
+  created_at: new Date().toISOString(),
+} as unknown as User;
+
+const DEMO_PROFILE: Profile = {
+  id: "demo-profile",
+  user_id: "demo-user-id",
+  full_name: "Usuário Demo",
+  email: "demo@exemplo.com",
+  phone: null,
+  company_id: DEMO_COMPANY_ID,
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const demo = useMemo(() => isDemoMode(), []);
+  const [user, setUser] = useState<User | null>(demo ? DEMO_USER : null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(demo ? DEMO_PROFILE : null);
+  const [loading, setLoading] = useState(!demo);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -42,12 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (demo) return; // skip real auth in demo mode
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid Supabase client deadlock
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
@@ -66,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [demo]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -100,8 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         profile,
-        companyId: profile?.company_id ?? null,
+        companyId: demo ? DEMO_COMPANY_ID : (profile?.company_id ?? null),
         loading,
+        isDemo: demo,
         signIn,
         signUp,
         signOut,
