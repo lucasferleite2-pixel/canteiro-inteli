@@ -241,7 +241,7 @@ export async function generateRdoPDF(
   const sorted = [...rdos].sort((a, b) => a.data.localeCompare(b.data));
 
   // Bookmark & TOC tracking
-  const bookmarks: { title: string; page: number }[] = [];
+  const bookmarks: { title: string; page: number; children?: { title: string; page: number }[] }[] = [];
   function trackSection(title: string) {
     bookmarks.push({ title, page: doc.getNumberOfPages() });
   }
@@ -450,10 +450,14 @@ export async function generateRdoPDF(
   });
 
   // Detailed entries
+  const chronSectionIdx = bookmarks.length - 1; // index of "Registros Cronológicos" bookmark
   for (let idx = 0; idx < sorted.length; idx++) {
     const rdo = sorted[idx];
     onProgress?.(`Processando RDO ${idx + 1}/${sorted.length}...`);
     doc.addPage();
+    // Track sub-bookmark for this day
+    if (!bookmarks[chronSectionIdx].children) bookmarks[chronSectionIdx].children = [];
+    bookmarks[chronSectionIdx].children!.push({ title: fmtDateShort(rdo.data), page: doc.getNumberOfPages() });
 
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
@@ -700,7 +704,12 @@ export async function generateRdoPDF(
   const outline = (doc as any).outline;
   if (outline && typeof outline.add === "function") {
     bookmarks.forEach((b) => {
-      outline.add(null, b.title, { pageNumber: b.page });
+      const parent = outline.add(null, b.title, { pageNumber: b.page });
+      if (b.children) {
+        b.children.forEach((child) => {
+          outline.add(parent, child.title, { pageNumber: child.page });
+        });
+      }
     });
   }
 
