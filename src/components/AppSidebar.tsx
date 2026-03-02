@@ -9,6 +9,7 @@ import {
   Building2,
   HardHat,
   Settings,
+  Shield,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -40,6 +41,7 @@ const controlItems = [
 
 const systemItems = [
   { title: "Alertas", url: "/alertas", icon: Bell },
+  { title: "Auditoria RDO", url: "/auditoria", icon: Shield },
   { title: "Usuários", url: "/usuarios", icon: Users },
   { title: "Empresa", url: "/empresa/config", icon: Settings },
 ];
