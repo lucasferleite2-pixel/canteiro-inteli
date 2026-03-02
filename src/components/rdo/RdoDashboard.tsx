@@ -14,6 +14,7 @@ import {
   TrendingDown,
   ShieldAlert,
   CheckCheck,
+  RotateCcw,
 } from "lucide-react";
 import {
   AreaChart,
@@ -146,6 +147,11 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
     });
   }, [stats]);
 
+  const restoreAlerts = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setDismissed([]);
+  }, []);
+
   if (!stats) return null;
 
   const visibleAlerts = stats.alerts.filter((a) => !dismissed.includes(a.title));
@@ -210,18 +216,27 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
       </div>
 
       {/* Smart Alerts */}
-      {visibleAlerts.length > 0 && (
+      {(visibleAlerts.length > 0 || dismissed.length > 0) && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">
-              {visibleAlerts.length} alerta(s) ativo(s)
+              {visibleAlerts.length > 0
+                ? `${visibleAlerts.length} alerta(s) ativo(s)`
+                : "Nenhum alerta ativo"}
               {dismissed.length > 0 && ` · ${dismissed.length} lido(s)`}
             </span>
-            {visibleAlerts.length > 1 && (
-              <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={dismissAll}>
-                <CheckCheck className="h-3 w-3" /> Marcar todos como lidos
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {dismissed.length > 0 && (
+                <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={restoreAlerts}>
+                  <RotateCcw className="h-3 w-3" /> Restaurar lidos
+                </Button>
+              )}
+              {visibleAlerts.length > 1 && (
+                <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={dismissAll}>
+                  <CheckCheck className="h-3 w-3" /> Marcar todos como lidos
+                </Button>
+              )}
+            </div>
           </div>
           {visibleAlerts.map((alert, i) => (
             <Alert key={i} variant="destructive" className="border-destructive/30 bg-destructive/5 relative">
