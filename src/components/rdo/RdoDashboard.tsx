@@ -1,0 +1,263 @@
+import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  TrendingUp,
+  DollarSign,
+  AlertTriangle,
+  Users,
+  Activity,
+  Calendar,
+  BarChart3,
+} from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+
+interface RdoDashboardProps {
+  rdos: any[];
+}
+
+export function RdoDashboard({ rdos }: RdoDashboardProps) {
+  const stats = useMemo(() => {
+    if (!rdos.length) return null;
+
+    const sorted = [...rdos].sort((a, b) => a.data.localeCompare(b.data));
+
+    const totalCost = sorted.reduce((s, r) => s + (Number(r.custo_dia) || 0), 0);
+    const avgProductivity = sorted.reduce((s, r) => s + (Number(r.produtividade_percentual) || 0), 0) / sorted.length;
+    const totalTeam = sorted.reduce((s, r) => s + (Number(r.equipe_total) || 0), 0);
+    const avgTeam = totalTeam / sorted.length;
+    const totalHours = sorted.reduce((s, r) => s + (Number(r.horas_trabalhadas) || 0), 0);
+    const highRiskDays = sorted.filter((r) => r.risco_dia === "alto").length;
+    const lastProgress = Number(sorted[sorted.length - 1]?.percentual_fisico_acumulado) || 0;
+
+    // Chart data
+    const productivityData = sorted.map((r) => ({
+      date: r.data.slice(5), // MM-DD
+      value: Number(r.produtividade_percentual) || 0,
+    }));
+
+    let cumCost = 0;
+    const costData = sorted.map((r) => {
+      cumCost += Number(r.custo_dia) || 0;
+      return { date: r.data.slice(5), value: cumCost };
+    });
+
+    const riskData = sorted.map((r) => ({
+      date: r.data.slice(5),
+      value: r.risco_dia === "alto" ? 3 : r.risco_dia === "medio" ? 2 : 1,
+      level: r.risco_dia,
+    }));
+
+    return {
+      totalCost,
+      avgProductivity,
+      avgTeam,
+      totalHours,
+      highRiskDays,
+      lastProgress,
+      totalDays: sorted.length,
+      productivityData,
+      costData,
+      riskData,
+    };
+  }, [rdos]);
+
+  if (!stats) return null;
+
+  const riskColor = (level: string) => {
+    if (level === "alto") return "hsl(0, 72%, 51%)";
+    if (level === "medio") return "hsl(38, 92%, 50%)";
+    return "hsl(152, 60%, 40%)";
+  };
+
+  const formatCurrency = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <BarChart3 className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Dashboard de KPIs
+        </h2>
+        <Badge variant="secondary" className="text-xs">{stats.totalDays} dias</Badge>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Produtividade Média"
+          value={`${stats.avgProductivity.toFixed(0)}%`}
+          color="text-primary"
+        />
+        <KpiCard
+          icon={<DollarSign className="h-4 w-4" />}
+          label="Custo Acumulado"
+          value={formatCurrency(stats.totalCost)}
+          color="text-primary"
+        />
+        <KpiCard
+          icon={<AlertTriangle className="h-4 w-4" />}
+          label="Dias Risco Alto"
+          value={String(stats.highRiskDays)}
+          color={stats.highRiskDays > 0 ? "text-destructive" : "text-muted-foreground"}
+        />
+        <KpiCard
+          icon={<Activity className="h-4 w-4" />}
+          label="Avanço Físico"
+          value={`${stats.lastProgress.toFixed(1)}%`}
+          color="text-primary"
+        />
+        <KpiCard
+          icon={<Users className="h-4 w-4" />}
+          label="Equipe Média"
+          value={stats.avgTeam.toFixed(0)}
+          color="text-muted-foreground"
+        />
+        <KpiCard
+          icon={<Calendar className="h-4 w-4" />}
+          label="Horas Totais"
+          value={stats.totalHours.toFixed(0)}
+          color="text-muted-foreground"
+        />
+      </div>
+
+      {/* Mini Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Productivity */}
+        <Card>
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5" /> Produtividade Diária (%)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2 pb-3">
+            <ResponsiveContainer width="100%" height={120}>
+              <AreaChart data={stats.productivityData}>
+                <defs>
+                  <linearGradient id="prodGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(210, 100%, 45%)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(210, 100%, 45%)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis hide domain={[0, 100]} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  formatter={(v: number) => [`${v.toFixed(0)}%`, "Produtividade"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="hsl(210, 100%, 45%)"
+                  strokeWidth={2}
+                  fill="url(#prodGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Cumulative Cost */}
+        <Card>
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <DollarSign className="h-3.5 w-3.5" /> Custo Acumulado (R$)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2 pb-3">
+            <ResponsiveContainer width="100%" height={120}>
+              <AreaChart data={stats.costData}>
+                <defs>
+                  <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(152, 60%, 40%)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(152, 60%, 40%)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis hide />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  formatter={(v: number) => [formatCurrency(v), "Custo"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="hsl(152, 60%, 40%)"
+                  strokeWidth={2}
+                  fill="url(#costGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Risk */}
+        <Card>
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" /> Nível de Risco Diário
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2 pb-3">
+            <ResponsiveContainer width="100%" height={120}>
+              <BarChart data={stats.riskData}>
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis hide domain={[0, 3]} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  formatter={(_: any, __: any, props: any) => {
+                    const labels: Record<string, string> = { baixo: "Baixo", medio: "Médio", alto: "Alto" };
+                    return [labels[props.payload.level] || props.payload.level, "Risco"];
+                  }}
+                />
+                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+                  {stats.riskData.map((entry, index) => (
+                    <Cell key={index} fill={riskColor(entry.level)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({
+  icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-3 flex flex-col gap-1">
+        <div className={`flex items-center gap-1.5 ${color}`}>
+          {icon}
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide truncate">
+            {label}
+          </span>
+        </div>
+        <span className={`text-lg font-bold ${color}`}>{value}</span>
+      </CardContent>
+    </Card>
+  );
+}
