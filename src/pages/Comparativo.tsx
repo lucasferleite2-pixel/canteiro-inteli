@@ -1,9 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { generateComparativoPDF } from "@/lib/comparativoPdfGenerator";
 import {
   BarChart3,
   TrendingUp,
@@ -13,6 +16,8 @@ import {
   Activity,
   Calendar,
   Building2,
+  FileDown,
+  Loader2,
 } from "lucide-react";
 import {
   BarChart,
@@ -55,6 +60,18 @@ const COLORS = [
 
 export default function Comparativo() {
   const { companyId } = useAuth();
+  const { toast } = useToast();
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const { data: company } = useQuery({
+    queryKey: ["company", companyId],
+    queryFn: async () => {
+      if (!companyId) return null;
+      const { data } = await supabase.from("companies").select("name").eq("id", companyId).maybeSingle();
+      return data;
+    },
+    enabled: !!companyId,
+  });
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects", companyId],
@@ -177,14 +194,37 @@ export default function Comparativo() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <BarChart3 className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Comparativo de Obras</h1>
-          <p className="text-sm text-muted-foreground">
-            Análise gerencial lado a lado dos KPIs de todas as obras com RDO
-          </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Comparativo de Obras</h1>
+            <p className="text-sm text-muted-foreground">
+              Análise gerencial lado a lado dos KPIs de todas as obras com RDO
+            </p>
+          </div>
         </div>
+        {stats.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pdfLoading}
+            onClick={() => {
+              setPdfLoading(true);
+              try {
+                generateComparativoPDF(stats, company?.name);
+                toast({ title: "PDF exportado com sucesso!" });
+              } catch (err: any) {
+                toast({ variant: "destructive", title: "Erro ao gerar PDF", description: err.message });
+              } finally {
+                setPdfLoading(false);
+              }
+            }}
+          >
+            {pdfLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+            Exportar PDF
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
