@@ -10,6 +10,7 @@ import {
   HardHat,
   Settings,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -31,6 +32,7 @@ const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Obras", url: "/obras", icon: Building2 },
   { title: "Diário de Obra", url: "/diario", icon: ClipboardList },
+  { title: "Comparativo", url: "/comparativo", icon: BarChart3 },
 ];
 
 const controlItems = [
