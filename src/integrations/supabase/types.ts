@@ -555,6 +555,388 @@ export type Database = {
           },
         ]
       }
+      rdo_atividade: {
+        Row: {
+          company_id: string
+          concluida: boolean | null
+          created_at: string
+          descricao: string
+          etapa_planejamento_id: string | null
+          id: string
+          impacto_cronograma: string | null
+          rdo_dia_id: string
+          tipo_atividade: string
+          vinculada_ao_planejamento: boolean | null
+        }
+        Insert: {
+          company_id: string
+          concluida?: boolean | null
+          created_at?: string
+          descricao: string
+          etapa_planejamento_id?: string | null
+          id?: string
+          impacto_cronograma?: string | null
+          rdo_dia_id: string
+          tipo_atividade?: string
+          vinculada_ao_planejamento?: boolean | null
+        }
+        Update: {
+          company_id?: string
+          concluida?: boolean | null
+          created_at?: string
+          descricao?: string
+          etapa_planejamento_id?: string | null
+          id?: string
+          impacto_cronograma?: string | null
+          rdo_dia_id?: string
+          tipo_atividade?: string
+          vinculada_ao_planejamento?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_atividade_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_atividade_rdo_dia_id_fkey"
+            columns: ["rdo_dia_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_dia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_audit_log: {
+        Row: {
+          action: string
+          changes: Json | null
+          company_id: string
+          created_at: string
+          id: string
+          rdo_dia_id: string
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          action: string
+          changes?: Json | null
+          company_id: string
+          created_at?: string
+          id?: string
+          rdo_dia_id: string
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          action?: string
+          changes?: Json | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          rdo_dia_id?: string
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_audit_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_audit_log_rdo_dia_id_fkey"
+            columns: ["rdo_dia_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_dia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_dia: {
+        Row: {
+          clima: string
+          company_id: string
+          created_at: string
+          criado_por: string
+          custo_dia: number | null
+          data: string
+          equipe_total: number
+          fase_obra: string | null
+          hash_integridade: string | null
+          horas_trabalhadas: number | null
+          id: string
+          is_locked: boolean | null
+          obra_id: string
+          observacoes_gerais: string | null
+          percentual_fisico_acumulado: number | null
+          percentual_fisico_dia: number | null
+          produtividade_percentual: number | null
+          risco_dia: string | null
+          updated_at: string
+          version: number | null
+        }
+        Insert: {
+          clima?: string
+          company_id: string
+          created_at?: string
+          criado_por: string
+          custo_dia?: number | null
+          data?: string
+          equipe_total?: number
+          fase_obra?: string | null
+          hash_integridade?: string | null
+          horas_trabalhadas?: number | null
+          id?: string
+          is_locked?: boolean | null
+          obra_id: string
+          observacoes_gerais?: string | null
+          percentual_fisico_acumulado?: number | null
+          percentual_fisico_dia?: number | null
+          produtividade_percentual?: number | null
+          risco_dia?: string | null
+          updated_at?: string
+          version?: number | null
+        }
+        Update: {
+          clima?: string
+          company_id?: string
+          created_at?: string
+          criado_por?: string
+          custo_dia?: number | null
+          data?: string
+          equipe_total?: number
+          fase_obra?: string | null
+          hash_integridade?: string | null
+          horas_trabalhadas?: number | null
+          id?: string
+          is_locked?: boolean | null
+          obra_id?: string
+          observacoes_gerais?: string | null
+          percentual_fisico_acumulado?: number | null
+          percentual_fisico_dia?: number | null
+          produtividade_percentual?: number | null
+          risco_dia?: string | null
+          updated_at?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_dia_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_dia_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_foto: {
+        Row: {
+          atividade_relacionada_id: string | null
+          company_id: string
+          created_at: string
+          data_captura: string | null
+          descricao: string | null
+          fase_obra: string | null
+          file_name: string
+          hash_integridade: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          rdo_dia_id: string
+          storage_path: string
+          tag_risco: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          atividade_relacionada_id?: string | null
+          company_id: string
+          created_at?: string
+          data_captura?: string | null
+          descricao?: string | null
+          fase_obra?: string | null
+          file_name: string
+          hash_integridade?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          rdo_dia_id: string
+          storage_path: string
+          tag_risco?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          atividade_relacionada_id?: string | null
+          company_id?: string
+          created_at?: string
+          data_captura?: string | null
+          descricao?: string | null
+          fase_obra?: string | null
+          file_name?: string
+          hash_integridade?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          rdo_dia_id?: string
+          storage_path?: string
+          tag_risco?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_foto_atividade_relacionada_id_fkey"
+            columns: ["atividade_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_atividade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_foto_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_foto_rdo_dia_id_fkey"
+            columns: ["rdo_dia_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_dia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_material: {
+        Row: {
+          centro_custo: string | null
+          company_id: string
+          created_at: string
+          fase_relacionada: string | null
+          gera_alerta_desequilibrio: boolean | null
+          id: string
+          item: string
+          previsto_em_orcamento: boolean | null
+          quantidade: number | null
+          rdo_dia_id: string
+          tipo: string
+          unidade: string | null
+          valor_total: number | null
+          valor_unitario: number | null
+        }
+        Insert: {
+          centro_custo?: string | null
+          company_id: string
+          created_at?: string
+          fase_relacionada?: string | null
+          gera_alerta_desequilibrio?: boolean | null
+          id?: string
+          item: string
+          previsto_em_orcamento?: boolean | null
+          quantidade?: number | null
+          rdo_dia_id: string
+          tipo?: string
+          unidade?: string | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Update: {
+          centro_custo?: string | null
+          company_id?: string
+          created_at?: string
+          fase_relacionada?: string | null
+          gera_alerta_desequilibrio?: boolean | null
+          id?: string
+          item?: string
+          previsto_em_orcamento?: boolean | null
+          quantidade?: number | null
+          rdo_dia_id?: string
+          tipo?: string
+          unidade?: string | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_material_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_material_rdo_dia_id_fkey"
+            columns: ["rdo_dia_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_dia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_ocorrencia: {
+        Row: {
+          company_id: string
+          created_at: string
+          descricao: string
+          gera_alerta: boolean | null
+          gera_risco_contratual: boolean | null
+          id: string
+          impacto: string | null
+          rdo_dia_id: string
+          responsavel: string | null
+          tipo_ocorrencia: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          descricao: string
+          gera_alerta?: boolean | null
+          gera_risco_contratual?: boolean | null
+          id?: string
+          impacto?: string | null
+          rdo_dia_id: string
+          responsavel?: string | null
+          tipo_ocorrencia?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          descricao?: string
+          gera_alerta?: boolean | null
+          gera_risco_contratual?: boolean | null
+          id?: string
+          impacto?: string | null
+          rdo_dia_id?: string
+          responsavel?: string | null
+          tipo_ocorrencia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_ocorrencia_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_ocorrencia_rdo_dia_id_fkey"
+            columns: ["rdo_dia_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_dia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string
