@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,11 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+
+  // Load company data when dialog opens
+  useEffect(() => {
+    if (open) loadCompanyData();
+  }, [open, companyId]);
 
   const [filters, setFilters] = useState<PdfFilters>({
     dateFrom: undefined,
@@ -187,14 +192,8 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
 
   const update = (partial: Partial<PdfFilters>) => setFilters((f) => ({ ...f, ...partial }));
 
-  // Load company data when dialog opens
-  const handleOpenChange = (v: boolean) => {
-    if (v) loadCompanyData();
-    onOpenChange(v);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configurar Relatório PDF</DialogTitle>
