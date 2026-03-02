@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   TrendingUp,
   DollarSign,
@@ -9,6 +10,8 @@ import {
   Activity,
   Calendar,
   BarChart3,
+  TrendingDown,
+  ShieldAlert,
 } from "lucide-react";
 import {
   AreaChart,
@@ -58,6 +61,49 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
       level: r.risco_dia,
     }));
 
+    // Alerts detection
+    const alerts: { type: "productivity" | "risk"; title: string; description: string }[] = [];
+
+    // Low productivity days (below 50%)
+    const lowProdDays = sorted.filter((r) => (Number(r.produtividade_percentual) || 0) < 50);
+    if (lowProdDays.length > 0) {
+      const dates = lowProdDays.map((r) => r.data.slice(5)).join(", ");
+      alerts.push({
+        type: "productivity",
+        title: `Produtividade abaixo de 50% em ${lowProdDays.length} dia(s)`,
+        description: `Dias afetados: ${dates}. Verifique causas como falta de material, condições climáticas ou equipe insuficiente.`,
+      });
+    }
+
+    // 3+ consecutive high-risk days
+    let maxConsec = 0;
+    let curConsec = 0;
+    let consecStart = "";
+    let consecEnd = "";
+    let bestStart = "";
+    let bestEnd = "";
+    for (const r of sorted) {
+      if (r.risco_dia === "alto") {
+        if (curConsec === 0) consecStart = r.data.slice(5);
+        curConsec++;
+        consecEnd = r.data.slice(5);
+        if (curConsec > maxConsec) {
+          maxConsec = curConsec;
+          bestStart = consecStart;
+          bestEnd = consecEnd;
+        }
+      } else {
+        curConsec = 0;
+      }
+    }
+    if (maxConsec >= 3) {
+      alerts.push({
+        type: "risk",
+        title: `${maxConsec} dias consecutivos com risco alto`,
+        description: `Período: ${bestStart} a ${bestEnd}. Sequência prolongada de risco alto pode indicar problemas estruturais na operação. Ação corretiva recomendada.`,
+      });
+    }
+
     return {
       totalCost,
       avgProductivity,
@@ -69,6 +115,7 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
       productivityData,
       costData,
       riskData,
+      alerts,
     };
   }, [rdos]);
 
@@ -132,6 +179,23 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
           color="text-muted-foreground"
         />
       </div>
+
+      {/* Smart Alerts */}
+      {stats.alerts.length > 0 && (
+        <div className="space-y-2">
+          {stats.alerts.map((alert, i) => (
+            <Alert key={i} variant="destructive" className="border-destructive/30 bg-destructive/5">
+              {alert.type === "productivity" ? (
+                <TrendingDown className="h-4 w-4" />
+              ) : (
+                <ShieldAlert className="h-4 w-4" />
+              )}
+              <AlertTitle className="text-sm font-semibold">{alert.title}</AlertTitle>
+              <AlertDescription className="text-xs">{alert.description}</AlertDescription>
+            </Alert>
+          ))}
+        </div>
+      )}
 
       {/* Mini Charts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
