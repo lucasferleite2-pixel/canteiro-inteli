@@ -373,6 +373,42 @@ export async function generateRdoPDF(
     margin: { top: HEADER_OFFSET + 4 },
   });
 
+  // Financial Integration Summary in executive section
+  if (includeDespesas) {
+    let totalDespesasPdf = 0;
+    let totalNaoPrevistoPdf = 0;
+    let despesaCountPdf = 0;
+    for (const rdo of sorted) {
+      const desp = await fetchDespesas(rdo.id);
+      const pdfDesp = desp.filter((d: any) => d.incluir_no_pdf);
+      despesaCountPdf += pdfDesp.length;
+      totalDespesasPdf += pdfDesp.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+      totalNaoPrevistoPdf += pdfDesp.filter((d: any) => !d.previsto_no_orcamento).reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+    }
+    if (despesaCountPdf > 0) {
+      const yAfterExec = (doc as any).lastAutoTable?.finalY ?? 100;
+      if (yAfterExec < pageH - 60) {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(BC[0], BC[1], BC[2]);
+        doc.text("Integração Financeira", 14, yAfterExec + 10);
+        autoTable(doc, {
+          startY: yAfterExec + 14,
+          head: [["Indicador", "Valor"]],
+          body: [
+            ["Lançamentos automáticos gerados", String(despesaCountPdf)],
+            ["Total integrado ao financeiro", `R$ ${totalDespesasPdf.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`],
+            ["Despesas não previstas", `R$ ${totalNaoPrevistoPdf.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`],
+          ],
+          theme: "grid",
+          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
+          styles: { fontSize: 9 },
+          margin: { top: HEADER_OFFSET + 4 },
+        });
+      }
+    }
+  }
+
   // ═══════════════════════════════════════
   // SECTION 2: CHARTS
   // ═══════════════════════════════════════

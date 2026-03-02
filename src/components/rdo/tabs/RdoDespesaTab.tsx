@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { isDemo, user } = useAuth();
   const qc = useQueryClient();
@@ -235,6 +237,17 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
       {canEdit && !showForm && (
         <Button variant="outline" size="sm" className="w-full" onClick={() => setShowForm(true)}>
           <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar Despesa
+        </Button>
+      )}
+
+      {despesas.length > 0 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full gap-1 text-xs text-muted-foreground"
+          onClick={() => navigate(isDemo ? "/financeiro?demo=true" : "/financeiro")}
+        >
+          <DollarSign className="h-3.5 w-3.5" /> Ver no financeiro
         </Button>
       )}
     </div>
