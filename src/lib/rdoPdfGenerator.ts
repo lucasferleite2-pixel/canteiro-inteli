@@ -76,6 +76,7 @@ export interface RdoPdfOptions {
   includeActivities?: boolean;
   includeOccurrences?: boolean;
   includeMaterials?: boolean;
+  includeDespesas?: boolean;
 }
 
 // ── Fetch sub-data ──
@@ -90,6 +91,10 @@ async function fetchMateriais(rdoDiaId: string) {
 }
 async function fetchOcorrencias(rdoDiaId: string) {
   const { data } = await supabase.from("rdo_ocorrencia").select("*").eq("rdo_dia_id", rdoDiaId).order("created_at");
+  return data || [];
+}
+async function fetchDespesas(rdoDiaId: string) {
+  const { data } = await supabase.from("rdo_despesa_item").select("*").eq("rdo_dia_id", rdoDiaId).order("created_at");
   return data || [];
 }
 async function fetchFotos(rdoDiaId: string) {
@@ -215,7 +220,7 @@ export async function generateRdoPDF(
   const {
     projectName, companyName, companyAddress, companyPhone, technicalResponsible,
     rdos, userName, aiSummary, logoBase64, brandColor,
-    includePhotos = true, includeActivities = true, includeOccurrences = true, includeMaterials = true,
+    includePhotos = true, includeActivities = true, includeOccurrences = true, includeMaterials = true, includeDespesas = true,
   } = options;
 
   const BC = brandColor ? hexToRgb(brandColor) : BLUE;
@@ -574,6 +579,44 @@ export async function generateRdoPDF(
           styles: { fontSize: 7, cellPadding: 1.5 },
         });
         y = (doc as any).lastAutoTable?.finalY + 6 || y + 20;
+      }
+    }
+
+    // Despesas
+    if (includeDespesas) {
+      const despesas = await fetchDespesas(rdo.id);
+      const despesasPdf = despesas.filter((d: any) => d.incluir_no_pdf);
+      if (despesasPdf.length > 0) {
+        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(40, 40, 40);
+        doc.text("💰 Despesas do Dia", 14, y);
+        y += 2;
+        const tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mão de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
+        autoTable(doc, {
+          startY: y,
+          margin: { top: HEADER_OFFSET + 4 },
+          head: [["Descrição", "Tipo", "Qtd", "Unid.", "V. Unit.", "V. Total"]],
+          body: despesasPdf.map((d: any) => [
+            d.descricao.substring(0, 50),
+            tipoLabels[d.tipo] || d.tipo,
+            String(d.quantidade || 0),
+            d.unidade || "un",
+            `R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+            `R$ ${Number(d.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+          ]),
+          theme: "grid",
+          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
+          styles: { fontSize: 7, cellPadding: 1.5 },
+        });
+        y = (doc as any).lastAutoTable?.finalY + 2 || y + 20;
+        const subtotal = despesasPdf.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(40, 40, 40);
+        doc.text(`Subtotal: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 14, y + 3);
+        y += 10;
       }
     }
   }

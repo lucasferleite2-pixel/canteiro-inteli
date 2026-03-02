@@ -9,7 +9,7 @@ import {
   Sun, Cloud, CloudRain, CloudLightning, CloudSnow,
   Users, ChevronDown, ChevronRight, Pencil, Trash2,
   Lock, LockOpen, TrendingUp, AlertTriangle, DollarSign,
-  Activity, Package, AlertCircle, Camera, ShieldAlert, Loader2,
+  Activity, Package, AlertCircle, Camera, ShieldAlert, Loader2, Receipt,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { RdoAtividadeTab } from "./tabs/RdoAtividadeTab";
 import { RdoMaterialTab } from "./tabs/RdoMaterialTab";
 import { RdoOcorrenciaTab } from "./tabs/RdoOcorrenciaTab";
+import { RdoDespesaTab } from "./tabs/RdoDespesaTab";
 import { RdoFotoTab } from "./tabs/RdoFotoTab";
 import { RdoRiscoTab } from "./tabs/RdoRiscoTab";
 
@@ -188,6 +189,7 @@ export function RdoSmartCard({ rdo, companyId, canModify, isAuthor, onEdit, onDe
                 <TabsTrigger value="atividades" className="gap-1 text-xs"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
                 <TabsTrigger value="materiais" className="gap-1 text-xs"><Package className="h-3.5 w-3.5" /> Materiais & Custos</TabsTrigger>
                 <TabsTrigger value="ocorrencias" className="gap-1 text-xs"><AlertCircle className="h-3.5 w-3.5" /> Ocorrências</TabsTrigger>
+                <TabsTrigger value="despesas" className="gap-1 text-xs"><Receipt className="h-3.5 w-3.5" /> Despesas</TabsTrigger>
                 <TabsTrigger value="fotos" className="gap-1 text-xs"><Camera className="h-3.5 w-3.5" /> Fotos</TabsTrigger>
                 <TabsTrigger value="risco" className="gap-1 text-xs"><ShieldAlert className="h-3.5 w-3.5" /> Análise de Risco</TabsTrigger>
               </TabsList>
@@ -199,6 +201,9 @@ export function RdoSmartCard({ rdo, companyId, canModify, isAuthor, onEdit, onDe
               </TabsContent>
               <TabsContent value="ocorrencias" className="mt-3">
                 <RdoOcorrenciaTab rdoDiaId={rdo.id} companyId={companyId} canEdit={canModify} />
+              </TabsContent>
+              <TabsContent value="despesas" className="mt-3">
+                <RdoDespesaTab rdoDiaId={rdo.id} companyId={companyId} canEdit={canModify} />
               </TabsContent>
               <TabsContent value="fotos" className="mt-3">
                 <RdoFotoTab rdoDiaId={rdo.id} companyId={companyId} canEdit={canModify} />

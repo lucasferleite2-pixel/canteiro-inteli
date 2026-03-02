@@ -657,6 +657,78 @@ export type Database = {
           },
         ]
       }
+      rdo_despesa_item: {
+        Row: {
+          afeta_curva_financeira: boolean | null
+          centro_custo: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          descricao: string
+          id: string
+          incluir_no_pdf: boolean | null
+          observacao: string | null
+          previsto_no_orcamento: boolean | null
+          quantidade: number
+          rdo_dia_id: string
+          tipo: string
+          unidade: string | null
+          valor_total: number | null
+          valor_unitario: number
+        }
+        Insert: {
+          afeta_curva_financeira?: boolean | null
+          centro_custo?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          descricao: string
+          id?: string
+          incluir_no_pdf?: boolean | null
+          observacao?: string | null
+          previsto_no_orcamento?: boolean | null
+          quantidade?: number
+          rdo_dia_id: string
+          tipo?: string
+          unidade?: string | null
+          valor_total?: number | null
+          valor_unitario?: number
+        }
+        Update: {
+          afeta_curva_financeira?: boolean | null
+          centro_custo?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          descricao?: string
+          id?: string
+          incluir_no_pdf?: boolean | null
+          observacao?: string | null
+          previsto_no_orcamento?: boolean | null
+          quantidade?: number
+          rdo_dia_id?: string
+          tipo?: string
+          unidade?: string | null
+          valor_total?: number | null
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_despesa_item_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_despesa_item_rdo_dia_id_fkey"
+            columns: ["rdo_dia_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_dia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rdo_dia: {
         Row: {
           clima: string

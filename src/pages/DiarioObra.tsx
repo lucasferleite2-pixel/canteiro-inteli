@@ -191,6 +191,7 @@ export default function DiarioObra() {
             includeActivities: pdfFilters.includeActivities,
             includeOccurrences: pdfFilters.includeOccurrences,
             includeMaterials: pdfFilters.includeMaterials,
+            includeDespesas: pdfFilters.includeDespesas,
           },
           companyId!,
           (step) => setPdfProgress(step)
