@@ -20,6 +20,7 @@ import { RdoSmartCard } from "@/components/rdo/RdoSmartCard";
 import { RdoFilters, RdoFilterValues, defaultFilters } from "@/components/rdo/RdoFilters";
 import { RdoNewDayDialog } from "@/components/rdo/RdoNewDayDialog";
 import { RdoDashboard } from "@/components/rdo/RdoDashboard";
+import { DemoBanner } from "@/components/DemoBanner";
 
 export default function DiarioObra() {
   const { companyId, user, isDemo } = useAuth();
@@ -256,6 +257,7 @@ export default function DiarioObra() {
 
   return (
     <div className="space-y-6">
+      <DemoBanner />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
