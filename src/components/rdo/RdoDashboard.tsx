@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   TrendingUp,
   DollarSign,
@@ -12,6 +13,7 @@ import {
   BarChart3,
   TrendingDown,
   ShieldAlert,
+  CheckCheck,
 } from "lucide-react";
 import {
   AreaChart,
@@ -119,7 +121,34 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
     };
   }, [rdos]);
 
+  // Dismissed alerts persistence via localStorage
+  const STORAGE_KEY = "rdo-dismissed-alerts";
+  const getDismissed = (): string[] => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+  };
+  const [dismissed, setDismissed] = useState<string[]>(getDismissed);
+
+  const dismissAlert = useCallback((key: string) => {
+    setDismissed((prev) => {
+      const next = [...prev, key];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const dismissAll = useCallback(() => {
+    if (!stats) return;
+    const keys = stats.alerts.map((a) => a.title);
+    setDismissed((prev) => {
+      const next = [...new Set([...prev, ...keys])];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [stats]);
+
   if (!stats) return null;
+
+  const visibleAlerts = stats.alerts.filter((a) => !dismissed.includes(a.title));
 
   const riskColor = (level: string) => {
     if (level === "alto") return "hsl(0, 72%, 51%)";
@@ -181,17 +210,36 @@ export function RdoDashboard({ rdos }: RdoDashboardProps) {
       </div>
 
       {/* Smart Alerts */}
-      {stats.alerts.length > 0 && (
+      {visibleAlerts.length > 0 && (
         <div className="space-y-2">
-          {stats.alerts.map((alert, i) => (
-            <Alert key={i} variant="destructive" className="border-destructive/30 bg-destructive/5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              {visibleAlerts.length} alerta(s) ativo(s)
+              {dismissed.length > 0 && ` · ${dismissed.length} lido(s)`}
+            </span>
+            {visibleAlerts.length > 1 && (
+              <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={dismissAll}>
+                <CheckCheck className="h-3 w-3" /> Marcar todos como lidos
+              </Button>
+            )}
+          </div>
+          {visibleAlerts.map((alert, i) => (
+            <Alert key={i} variant="destructive" className="border-destructive/30 bg-destructive/5 relative">
               {alert.type === "productivity" ? (
                 <TrendingDown className="h-4 w-4" />
               ) : (
                 <ShieldAlert className="h-4 w-4" />
               )}
-              <AlertTitle className="text-sm font-semibold">{alert.title}</AlertTitle>
-              <AlertDescription className="text-xs">{alert.description}</AlertDescription>
+              <AlertTitle className="text-sm font-semibold pr-20">{alert.title}</AlertTitle>
+              <AlertDescription className="text-xs pr-20">{alert.description}</AlertDescription>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-2 right-2 h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                onClick={() => dismissAlert(alert.title)}
+              >
+                <CheckCheck className="h-3.5 w-3.5" /> Lido
+              </Button>
             </Alert>
           ))}
         </div>
