@@ -104,6 +104,25 @@ export const DEMO_OCORRENCIAS = [
   { id: "oc5", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", tipo_ocorrencia: "Fornecedor", descricao: "Atraso na entrega de tirantes de ancoragem — previsão reprogramada para 05/03.", impacto: "médio", responsavel: "Compras", gera_risco_contratual: false, gera_alerta: false, created_at: "2026-02-28T14:00:00Z" },
 ];
 
+export const DEMO_DESPESAS = [
+  // rdo1 – Residencial Parque Verde 01/03
+  { id: "desp1", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", tipo: "material", descricao: "Concreto usinado fck 30 MPa", quantidade: 45, unidade: "m³", valor_unitario: 320, valor_total: 14400, centro_custo: "Estrutura", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-03-01T08:00:00Z" },
+  { id: "desp2", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", tipo: "mao_de_obra", descricao: "Equipe de concretagem (8h)", quantidade: 12, unidade: "HH", valor_unitario: 85, valor_total: 1020, centro_custo: "Estrutura", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-03-01T09:00:00Z" },
+  { id: "desp3", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", tipo: "equipamento", descricao: "Bomba de concreto estacionária", quantidade: 1, unidade: "diária", valor_unitario: 2800, valor_total: 2800, centro_custo: "Estrutura", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-03-01T10:00:00Z" },
+  // rdo2
+  { id: "desp4", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", tipo: "material", descricao: "Madeira para formas (pinus)", quantidade: 120, unidade: "m²", valor_unitario: 45, valor_total: 5400, centro_custo: "Estrutura", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-02-28T08:00:00Z" },
+  { id: "desp5", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", tipo: "mao_de_obra", descricao: "Carpinteiros — montagem de formas", quantidade: 8, unidade: "HH", valor_unitario: 75, valor_total: 600, centro_custo: "Estrutura", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-02-28T09:00:00Z" },
+  // rdo4
+  { id: "desp6", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", tipo: "equipamento", descricao: "Perfuratriz rotativa", quantidade: 1, unidade: "diária", valor_unitario: 3200, valor_total: 3200, centro_custo: "Fundação", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-03-02T08:00:00Z" },
+  { id: "desp7", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", tipo: "material", descricao: "Brocas de tungstênio (extra)", quantidade: 4, unidade: "un", valor_unitario: 1200, valor_total: 4800, centro_custo: "Fundação", previsto_no_orcamento: false, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: "Não previsto — solo rochoso", created_at: "2026-03-02T10:00:00Z" },
+  { id: "desp8", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", tipo: "transporte", descricao: "Frete especial — equipamento pesado", quantidade: 1, unidade: "viagem", valor_unitario: 1500, valor_total: 1500, centro_custo: "Logística", previsto_no_orcamento: false, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-03-02T11:00:00Z" },
+  // rdo5
+  { id: "desp9", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", tipo: "equipamento", descricao: "Bomba submersível de grande porte", quantidade: 2, unidade: "diária", valor_unitario: 1200, valor_total: 2400, centro_custo: "Fundação", previsto_no_orcamento: false, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: "Emergência — nível do rio", created_at: "2026-02-28T07:00:00Z" },
+  // rdo6
+  { id: "desp10", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", tipo: "material", descricao: "Blocos cerâmicos 14x19x39", quantidade: 2000, unidade: "un", valor_unitario: 2.8, valor_total: 5600, centro_custo: "Alvenaria", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-03-01T08:00:00Z" },
+  { id: "desp11", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", tipo: "mao_de_obra", descricao: "Pedreiros — alvenaria", quantidade: 16, unidade: "HH", valor_unitario: 65, valor_total: 1040, centro_custo: "Alvenaria", previsto_no_orcamento: true, incluir_no_pdf: true, afeta_curva_financeira: true, observacao: null, created_at: "2026-03-01T09:00:00Z" },
+];
+
 export const DEMO_FINANCIAL_RECORDS = [
   // Residencial Parque Verde (d1)
   { id: "fin1", description: "1ª Medição — Fundações", amount: 420000, type: "income", category: "Medição", due_date: "2026-01-15", paid_at: "2026-01-18", project_id: "d1", company_id: "00000000-0000-0000-0000-000000000000", created_at: "2026-01-10T10:00:00Z" },
