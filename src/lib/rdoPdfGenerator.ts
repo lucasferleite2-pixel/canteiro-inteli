@@ -677,26 +677,59 @@ export async function generateRdoPDF(
   // ═══════════════════════════════════════
   const tocEntries = bookmarks.filter((b) => b.title !== "Sumário");
   doc.setPage(tocPageNum);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  tocEntries.forEach((entry, i) => {
-    const y = 40 + i * 10;
+  let tocY = 40;
+  const tocLeftMain = 20;
+  const tocLeftSub = 30;
+  const tocRight = pageW - 20;
+
+  for (const entry of tocEntries) {
+    if (tocY > pageH - 20) { doc.addPage(); tocY = HEADER_OFFSET + 10; }
+
+    // Main entry
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
     doc.setTextColor(40, 40, 40);
-    doc.text(entry.title, 20, y);
-    // Dot leader
+    doc.text(entry.title, tocLeftMain, tocY);
     const titleW = doc.getTextWidth(entry.title);
     const pageNumStr = String(entry.page);
     const pageNumW = doc.getTextWidth(pageNumStr);
-    const dotsStart = 20 + titleW + 2;
-    const dotsEnd = pageW - 20 - pageNumW - 2;
+    const dotsStart = tocLeftMain + titleW + 2;
+    const dotsEnd = tocRight - pageNumW - 2;
     if (dotsEnd > dotsStart) {
       doc.setTextColor(180, 180, 180);
       const dotStr = ".".repeat(Math.floor((dotsEnd - dotsStart) / doc.getTextWidth(".")));
-      doc.text(dotStr, dotsStart, y);
+      doc.text(dotStr, dotsStart, tocY);
     }
     doc.setTextColor(BC[0], BC[1], BC[2]);
-    doc.text(pageNumStr, pageW - 20, y, { align: "right" });
-  });
+    doc.text(pageNumStr, tocRight, tocY, { align: "right" });
+    tocY += 8;
+
+    // Sub-entries (children) with visual indent
+    if (entry.children && entry.children.length > 0) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      for (const child of entry.children) {
+        if (tocY > pageH - 15) { doc.addPage(); tocY = HEADER_OFFSET + 10; }
+        doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
+        const childLabel = `– ${child.title}`;
+        doc.text(childLabel, tocLeftSub, tocY);
+        const cTitleW = doc.getTextWidth(childLabel);
+        const cPageStr = String(child.page);
+        const cPageW = doc.getTextWidth(cPageStr);
+        const cDotsStart = tocLeftSub + cTitleW + 2;
+        const cDotsEnd = tocRight - cPageW - 2;
+        if (cDotsEnd > cDotsStart) {
+          doc.setTextColor(200, 200, 200);
+          const cDotStr = ".".repeat(Math.floor((cDotsEnd - cDotsStart) / doc.getTextWidth(".")));
+          doc.text(cDotStr, cDotsStart, tocY);
+        }
+        doc.setTextColor(BC[0], BC[1], BC[2]);
+        doc.text(cPageStr, tocRight, tocY, { align: "right" });
+        tocY += 6;
+      }
+      tocY += 2; // extra spacing after children
+    }
+  }
 
   // ═══════════════════════════════════════
   // PDF OUTLINE (Bookmarks for navigation)
