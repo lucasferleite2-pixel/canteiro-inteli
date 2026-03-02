@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Loader2, Target, Trash2, Pencil } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_OBRAS, DEMO_FASE_PLANEJAMENTO } from "@/lib/demoData";
@@ -203,6 +204,29 @@ export default function PlanejamentoFases() {
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {resolvedFases.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Distribuição de Custo por Fase</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={resolvedFases.map((f) => ({ fase: f.fase, custo: f.custo_planejado }))} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="fase" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                    <YAxis tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={(l) => `Fase: ${l}`} />
+                    <Bar dataKey="custo" name="Custo Planejado" radius={[4, 4, 0, 0]}>
+                      {resolvedFases.map((_, i) => (
+                        <Cell key={i} className="fill-primary" />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           )}
 
           <Card>
