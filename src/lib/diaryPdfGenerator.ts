@@ -564,10 +564,59 @@ export async function generateDiaryPDF(
   doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório.", 14, 142);
   doc.text("O código contém o identificador único e o hash de integridade do documento.", 14, 147);
 
-  // Footer on all pages
+  // Header + Footer on all pages
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
+
+    // Repeating header on pages 2+ (skip cover)
+    if (i > 1) {
+      // Thin brand bar
+      doc.setFillColor(BC[0], BC[1], BC[2]);
+      doc.rect(0, 0, pageW, 2, "F");
+
+      let hx = 14;
+      const headerY = 6;
+
+      // Logo in header
+      if (logoBase64) {
+        try {
+          const hLogoW = 14;
+          const hLogoH = 7;
+          doc.addImage(logoBase64, "PNG", hx, headerY - 1, hLogoW, hLogoH);
+          hx += hLogoW + 3;
+        } catch { /* skip */ }
+      }
+
+      // Company name
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(BC[0], BC[1], BC[2]);
+      if (companyName) {
+        doc.text(companyName, hx, headerY + 3);
+        hx += doc.getTextWidth(companyName) + 4;
+      }
+
+      // Address / Phone / Technical responsible
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
+      const headerDetails = [
+        companyAddress,
+        companyPhone ? `Tel: ${companyPhone}` : null,
+        technicalResponsible ? `Resp: ${technicalResponsible}` : null,
+      ].filter(Boolean).join("  |  ");
+      if (headerDetails) {
+        doc.text(headerDetails, hx > 20 ? 14 : hx, headerY + 7);
+      }
+
+      // Divider line below header
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(14, headerY + 10, pageW - 14, headerY + 10);
+    }
+
+    // Footer
     doc.setFontSize(7);
     doc.setTextColor(160, 160, 160);
     doc.text(`${reportId}  |  Hash: ${shortHash}`, 14, pageH - 6);
