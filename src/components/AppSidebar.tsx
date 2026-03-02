@@ -11,6 +11,7 @@ import {
   Settings,
   Shield,
   BarChart3,
+  Target,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -33,6 +34,7 @@ const mainItems = [
   { title: "Obras", url: "/obras", icon: Building2 },
   { title: "Diário de Obra", url: "/diario", icon: ClipboardList },
   { title: "Comparativo", url: "/comparativo", icon: BarChart3 },
+  { title: "Planejamento", url: "/planejamento", icon: Target },
 ];
 
 const controlItems = [
