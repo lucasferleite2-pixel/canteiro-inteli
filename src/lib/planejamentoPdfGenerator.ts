@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import QRCode from "qrcode";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -320,19 +321,42 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
     legendY += 5;
   });
 
-  // ── Footer ──
+  // ── Generate QR Code ──
+  const qrPayload = JSON.stringify({
+    doc: "planejamento",
+    obra: obraName,
+    fases: fases.length,
+    cobertura: `${cobertura}%`,
+    gerado: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+  });
+  let qrDataUrl: string | null = null;
+  try {
+    qrDataUrl = await QRCode.toDataURL(qrPayload, { width: 120, margin: 1 });
+  } catch {
+    qrDataUrl = null;
+  }
+
+  // ── Footer with QR ──
   const pageCount = doc.getNumberOfPages();
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
     const pageH = doc.internal.pageSize.getHeight();
+    const footerY = pageH - 14;
+
+    if (qrDataUrl) {
+      doc.addImage(qrDataUrl, "PNG", margin, footerY - 6, 12, 12);
+    }
+
     doc.setFontSize(7);
     doc.setTextColor(...GRAY);
+    const textX = qrDataUrl ? margin + 14 : margin;
     doc.text(
       `Gerado em ${format(new Date(), "dd/MM/yyyy HH:mm")} | Página ${p} de ${pageCount}`,
-      pageW / 2,
-      pageH - 6,
-      { align: "center" }
+      textX,
+      footerY + 1
     );
+    doc.setFontSize(5.5);
+    doc.text("Selo de autenticidade – verifique os dados via QR Code", textX, footerY + 4.5);
   }
 
   doc.save(`planejamento-${obraName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
