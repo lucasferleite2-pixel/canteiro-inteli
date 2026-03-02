@@ -398,6 +398,7 @@ export type Database = {
         Row: {
           amount: number
           category: string | null
+          centro_custo: string | null
           company_id: string
           contract_id: string | null
           created_at: string
@@ -405,14 +406,18 @@ export type Database = {
           due_date: string | null
           id: string
           invoice_url: string | null
+          origem: string
           paid_at: string | null
+          previsto_no_orcamento: boolean | null
           project_id: string | null
+          rdo_despesa_item_id: string | null
           type: string
           updated_at: string
         }
         Insert: {
           amount: number
           category?: string | null
+          centro_custo?: string | null
           company_id: string
           contract_id?: string | null
           created_at?: string
@@ -420,14 +425,18 @@ export type Database = {
           due_date?: string | null
           id?: string
           invoice_url?: string | null
+          origem?: string
           paid_at?: string | null
+          previsto_no_orcamento?: boolean | null
           project_id?: string | null
+          rdo_despesa_item_id?: string | null
           type: string
           updated_at?: string
         }
         Update: {
           amount?: number
           category?: string | null
+          centro_custo?: string | null
           company_id?: string
           contract_id?: string | null
           created_at?: string
@@ -435,8 +444,11 @@ export type Database = {
           due_date?: string | null
           id?: string
           invoice_url?: string | null
+          origem?: string
           paid_at?: string | null
+          previsto_no_orcamento?: boolean | null
           project_id?: string | null
+          rdo_despesa_item_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -460,6 +472,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_records_rdo_despesa_item_id_fkey"
+            columns: ["rdo_despesa_item_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_despesa_item"
             referencedColumns: ["id"]
           },
         ]
