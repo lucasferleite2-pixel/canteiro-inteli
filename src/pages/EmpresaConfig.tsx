@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Loader2, Upload, Save, Trash2 } from "lucide-react";
+import { Building2, Loader2, Upload, Save, Trash2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { maskCnpj, validateCnpj } from "@/lib/cnpjUtils";
 
 export default function EmpresaConfig() {
   const { companyId, refreshProfile } = useAuth();
@@ -23,6 +24,7 @@ export default function EmpresaConfig() {
   const [technicalResponsible, setTechnicalResponsible] = useState("");
   const [brandColor, setBrandColor] = useState("#1E40AF");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [cnpjError, setCnpjError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!companyId) return;
@@ -34,7 +36,7 @@ export default function EmpresaConfig() {
         .single();
       if (data) {
         setName(data.name || "");
-        setCnpj(data.cnpj || "");
+        setCnpj(data.cnpj ? maskCnpj(data.cnpj) : "");
         setAddress(data.address || "");
         setPhone(data.phone || "");
         setTechnicalResponsible(data.technical_responsible || "");
@@ -94,13 +96,19 @@ export default function EmpresaConfig() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyId || !name.trim()) return;
+    const rawCnpj = cnpj.replace(/\D/g, "");
+    if (rawCnpj.length > 0 && !validateCnpj(rawCnpj)) {
+      setCnpjError("CNPJ inválido. Verifique os dígitos.");
+      return;
+    }
+    setCnpjError(null);
     setSaving(true);
 
     const { error } = await supabase
       .from("companies")
       .update({
         name: name.trim(),
-        cnpj: cnpj.trim() || null,
+        cnpj: rawCnpj || null,
         address: address.trim() || null,
         phone: phone.trim() || null,
         technical_responsible: technicalResponsible.trim() || null,
@@ -196,7 +204,13 @@ export default function EmpresaConfig() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cnpj">CNPJ</Label>
-                <Input id="cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" maxLength={18} />
+                <Input id="cnpj" value={cnpj} onChange={(e) => { setCnpj(maskCnpj(e.target.value)); setCnpjError(null); }} placeholder="00.000.000/0000-00" maxLength={18} />
+                {cnpjError && (
+                  <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {cnpjError}
+                  </p>
+                )}
               </div>
             </div>
 
