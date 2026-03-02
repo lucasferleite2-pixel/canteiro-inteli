@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, ClipboardList, Loader2, Sparkles, FileDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { DEMO_OBRAS, DEMO_RDO_ENTRIES } from "@/lib/demoData";
+import { DEMO_OBRAS, DEMO_RDO_ENTRIES, DEMO_DESPESAS } from "@/lib/demoData";
 import { DiaryPdfFilterDialog, PdfFilters } from "@/components/diary/DiaryPdfFilterDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +84,32 @@ export default function DiarioObra() {
   const resolvedRdos = isDemo
     ? DEMO_RDO_ENTRIES.filter((r) => r.obra_id === selectedProject)
     : rdos;
+
+  // Despesas for corrective actions
+  const { data: despesasData = [] } = useQuery({
+    queryKey: ["rdo_despesa_item_ca", companyId, selectedProject],
+    queryFn: async () => {
+      if (!companyId || !selectedProject) return [];
+      const rdoIds = resolvedRdos.map((r: any) => r.id);
+      if (!rdoIds.length) return [];
+      const { data, error } = await supabase
+        .from("rdo_despesa_item")
+        .select("*")
+        .eq("company_id", companyId)
+        .in("rdo_dia_id", rdoIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId && !!selectedProject && !isDemo && resolvedRdos.length > 0,
+  });
+
+  const resolvedDespesas = isDemo
+    ? DEMO_DESPESAS.filter((d) => resolvedRdos.some((r: any) => r.id === d.rdo_dia_id))
+    : despesasData;
+
+  const selectedObraOrcamento = isDemo
+    ? DEMO_OBRAS.find((o) => o.id === selectedProject)?.budget
+    : undefined;
 
   // Legacy entries (for backward compat & PDF)
   const { data: legacyEntries = [] } = useQuery({
@@ -302,7 +328,7 @@ export default function DiarioObra() {
 
       {/* KPI Dashboard */}
       {selectedProject && filteredRdos.length > 0 && (
-        <RdoDashboard rdos={filteredRdos} obraId={selectedProject} companyId={companyId || undefined} />
+        <RdoDashboard rdos={filteredRdos} despesas={resolvedDespesas} obraId={selectedProject} companyId={companyId || undefined} obraOrcamento={selectedObraOrcamento} />
       )}
 
       {/* New RDO Dialog */}
