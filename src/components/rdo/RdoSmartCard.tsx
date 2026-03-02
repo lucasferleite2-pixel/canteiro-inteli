@@ -4,14 +4,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   Sun, Cloud, CloudRain, CloudLightning, CloudSnow,
   Users, ChevronDown, ChevronRight, Pencil, Trash2,
-  Lock, TrendingUp, AlertTriangle, DollarSign,
-  Activity, Package, AlertCircle, Camera, ShieldAlert,
+  Lock, LockOpen, TrendingUp, AlertTriangle, DollarSign,
+  Activity, Package, AlertCircle, Camera, ShieldAlert, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { RdoAtividadeTab } from "./tabs/RdoAtividadeTab";
 import { RdoMaterialTab } from "./tabs/RdoMaterialTab";
 import { RdoOcorrenciaTab } from "./tabs/RdoOcorrenciaTab";
@@ -62,12 +67,39 @@ interface Props {
   rdo: RdoDia;
   companyId: string;
   canModify: boolean;
+  isAuthor: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export function RdoSmartCard({ rdo, companyId, canModify, onEdit, onDelete }: Props) {
+export function RdoSmartCard({ rdo, companyId, canModify, isAuthor, onEdit, onDelete }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const lockMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("rdo_dia").update({ is_locked: true }).eq("id", rdo.id);
+      if (error) throw error;
+      // Register in audit log
+      const { error: auditErr } = await supabase.from("rdo_audit_log").insert({
+        rdo_dia_id: rdo.id,
+        company_id: companyId,
+        user_id: user!.id,
+        action: "lock",
+        changes: { is_locked: true, locked_at: new Date().toISOString() },
+      });
+      if (auditErr) throw auditErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rdo_dia"] });
+      setShowLockConfirm(false);
+      toast({ title: "RDO travado com sucesso!", description: "Este registro não pode mais ser editado." });
+    },
+    onError: (err: any) => toast({ variant: "destructive", title: "Erro ao travar", description: err.message }),
+  });
 
   const weather = weatherMap[rdo.clima];
   const WeatherIcon = weather?.icon || Sun;
@@ -91,9 +123,19 @@ export function RdoSmartCard({ rdo, companyId, canModify, onEdit, onDelete }: Pr
                   {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   <span className="font-semibold text-sm">{formattedDate}</span>
                 </div>
-                {rdo.is_locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                {rdo.is_locked && (
+                  <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">
+                    <Lock className="h-3 w-3" /> Travado
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                {/* Lock button: visible to author when not locked */}
+                {isAuthor && !rdo.is_locked && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700" onClick={() => setShowLockConfirm(true)} title="Travar RDO">
+                    <LockOpen className="h-3.5 w-3.5" />
+                  </Button>
+                )}
                 {canModify && (
                   <>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -168,6 +210,29 @@ export function RdoSmartCard({ rdo, companyId, canModify, onEdit, onDelete }: Pr
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Lock confirmation dialog */}
+      <AlertDialog open={showLockConfirm} onOpenChange={setShowLockConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Travar este RDO?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Após o travamento, este registro não poderá mais ser editado ou excluído.
+              Esta ação é irreversível e será registrada no log de auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 text-white hover:bg-amber-700"
+              onClick={() => lockMutation.mutate()}
+            >
+              {lockMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Lock className="mr-2 h-4 w-4" /> Travar RDO
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
