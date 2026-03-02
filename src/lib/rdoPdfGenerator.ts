@@ -240,6 +240,12 @@ export async function generateRdoPDF(
   // Sort chronologically
   const sorted = [...rdos].sort((a, b) => a.data.localeCompare(b.data));
 
+  // Bookmark & TOC tracking
+  const bookmarks: { title: string; page: number }[] = [];
+  function trackSection(title: string) {
+    bookmarks.push({ title, page: doc.getNumberOfPages() });
+  }
+
   // ═══════════════════════════════════════
   // PAGE 1: COVER
   // ═══════════════════════════════════════
@@ -327,26 +333,18 @@ export async function generateRdoPDF(
   // ═══════════════════════════════════════
   onProgress?.("Gerando sumário...");
   doc.addPage();
+  trackSection("Sumário");
   addSectionHeader(doc, "Sumário", 24, BC);
 
-  const tocItems = [
-    "1. Resumo Executivo & KPIs",
-    "2. Gráficos de Desempenho",
-    ...(aiSummary ? ["3. Análise Inteligente (IA)"] : []),
-    `${aiSummary ? 4 : 3}. Registros Cronológicos Detalhados`,
-    ...(includePhotos ? [`${aiSummary ? 5 : 4}. Registro Fotográfico`] : []),
-    `${aiSummary ? (includePhotos ? 6 : 5) : (includePhotos ? 5 : 4)}. Informações de Verificação`,
-  ];
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(40, 40, 40);
-  tocItems.forEach((item, i) => doc.text(item, 20, 40 + i * 10));
+  const tocPageNum = doc.getNumberOfPages();
+  // TOC content drawn at the end with correct page numbers
 
   // ═══════════════════════════════════════
   // SECTION 1: EXECUTIVE SUMMARY & KPIs
   // ═══════════════════════════════════════
   onProgress?.("Gerando resumo executivo...");
   doc.addPage();
+  trackSection("1. Resumo Executivo & KPIs");
   addSectionHeader(doc, "1. Resumo Executivo & KPIs", 24, BC);
 
   autoTable(doc, {
@@ -375,6 +373,7 @@ export async function generateRdoPDF(
   // ═══════════════════════════════════════
   onProgress?.("Gerando gráficos...");
   doc.addPage();
+  trackSection("2. Gráficos de Desempenho");
   addSectionHeader(doc, "2. Gráficos de Desempenho", 24, BC);
 
   // Productivity gauge
@@ -413,6 +412,7 @@ export async function generateRdoPDF(
   if (aiSummary) {
     onProgress?.("Adicionando análise IA...");
     doc.addPage();
+    trackSection(`${sectionNum}. Análise Inteligente (IA)`);
     addSectionHeader(doc, `${sectionNum}. Análise Inteligente (IA)`, 24, BC);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
@@ -427,6 +427,7 @@ export async function generateRdoPDF(
   // ═══════════════════════════════════════
   onProgress?.("Gerando registros cronológicos...");
   doc.addPage();
+  trackSection(`${sectionNum}. Registros Cronológicos Detalhados`);
   addSectionHeader(doc, `${sectionNum}. Registros Cronológicos Detalhados`, 24, BC);
 
   // Summary table
@@ -580,6 +581,7 @@ export async function generateRdoPDF(
   if (includePhotos) {
     onProgress?.("Carregando fotos...");
     doc.addPage();
+    trackSection(`${sectionNum}. Registro Fotográfico`);
     addSectionHeader(doc, `${sectionNum}. Registro Fotográfico`, 24, BC);
 
     let photoY = 38;
@@ -645,6 +647,7 @@ export async function generateRdoPDF(
   // ═══════════════════════════════════════
   onProgress?.("Finalizando documento...");
   doc.addPage();
+  trackSection(`${sectionNum}. Informações de Verificação`);
   addSectionHeader(doc, `${sectionNum}. Informações de Verificação`, 24, BC);
 
   doc.setFontSize(9);
@@ -664,6 +667,42 @@ export async function generateRdoPDF(
   doc.setFontSize(7);
   doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
   doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório.", 14, 142);
+
+  // ═══════════════════════════════════════
+  // DRAW TOC WITH PAGE NUMBERS
+  // ═══════════════════════════════════════
+  const tocEntries = bookmarks.filter((b) => b.title !== "Sumário");
+  doc.setPage(tocPageNum);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  tocEntries.forEach((entry, i) => {
+    const y = 40 + i * 10;
+    doc.setTextColor(40, 40, 40);
+    doc.text(entry.title, 20, y);
+    // Dot leader
+    const titleW = doc.getTextWidth(entry.title);
+    const pageNumStr = String(entry.page);
+    const pageNumW = doc.getTextWidth(pageNumStr);
+    const dotsStart = 20 + titleW + 2;
+    const dotsEnd = pageW - 20 - pageNumW - 2;
+    if (dotsEnd > dotsStart) {
+      doc.setTextColor(180, 180, 180);
+      const dotStr = ".".repeat(Math.floor((dotsEnd - dotsStart) / doc.getTextWidth(".")));
+      doc.text(dotStr, dotsStart, y);
+    }
+    doc.setTextColor(BC[0], BC[1], BC[2]);
+    doc.text(pageNumStr, pageW - 20, y, { align: "right" });
+  });
+
+  // ═══════════════════════════════════════
+  // PDF OUTLINE (Bookmarks for navigation)
+  // ═══════════════════════════════════════
+  const outline = (doc as any).outline;
+  if (outline && typeof outline.add === "function") {
+    bookmarks.forEach((b) => {
+      outline.add(null, b.title, { pageNumber: b.page });
+    });
+  }
 
   // ═══════════════════════════════════════
   // HEADERS & FOOTERS
