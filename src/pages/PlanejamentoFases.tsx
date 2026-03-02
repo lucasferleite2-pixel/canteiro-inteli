@@ -321,10 +321,20 @@ export default function PlanejamentoFases() {
                 Custo por unidade: {formatCurrency(parseFloat(form.custo_planejado) / parseFloat(form.quantidade_planejada))}
               </p>
             )}
+            {!editingId && resolvedFases.some((f) => f.fase === form.fase) && (
+              <p className="text-xs text-destructive font-medium">
+                A fase "{form.fase}" já está cadastrada nesta obra. Escolha outra fase.
+              </p>
+            )}
             <Button
               className="w-full"
               onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !form.quantidade_planejada || !form.custo_planejado}
+              disabled={
+                saveMutation.isPending ||
+                !form.quantidade_planejada ||
+                !form.custo_planejado ||
+                (!editingId && resolvedFases.some((f) => f.fase === form.fase))
+              }
             >
               {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingId ? "Salvar Alterações" : "Cadastrar Fase"}
