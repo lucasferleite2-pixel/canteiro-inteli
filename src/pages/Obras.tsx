@@ -11,6 +11,7 @@ import { Plus, Building2, MapPin, Calendar, DollarSign, Loader2 } from "lucide-r
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_OBRAS } from "@/lib/demoData";
+import { DemoBanner } from "@/components/DemoBanner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -82,6 +83,7 @@ export default function Obras() {
 
   return (
     <div className="space-y-6">
+      <DemoBanner />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Obras</h1>

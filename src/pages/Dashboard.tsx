@@ -1,5 +1,5 @@
-import { Loader2, Eye } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
+import { DemoBanner } from "@/components/DemoBanner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -161,14 +161,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {isDemo && (
-        <Alert className="border-warning/30 bg-warning/10">
-          <Eye className="h-4 w-4 text-warning" />
-          <AlertDescription className="text-sm text-warning font-medium">
-            Você está no <strong>modo demonstração</strong> — os dados exibidos são fictícios e servem apenas para apresentação.
-          </AlertDescription>
-        </Alert>
-      )}
+      <DemoBanner />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard Executivo</h1>
         <p className="text-muted-foreground text-sm">Visão consolidada de obras, finanças e alertas.</p>
