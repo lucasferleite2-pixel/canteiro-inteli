@@ -416,10 +416,25 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
   }
 
   const pageCount = doc.getNumberOfPages();
+  const watermarkText = companyName || "";
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
     const pageH = doc.internal.pageSize.getHeight();
     const footerY = pageH - 14;
+
+    // ── Watermark ──
+    if (watermarkText) {
+      doc.saveGraphicsState();
+      const gState = new (doc as any).GState({ opacity: 0.06 });
+      doc.setGState(gState);
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(54);
+      doc.setFont("helvetica", "bold");
+      const cx = pageW / 2;
+      const cy = pageH / 2;
+      doc.text(watermarkText, cx, cy, { align: "center", angle: 45 });
+      doc.restoreGraphicsState();
+    }
 
     if (qrDataUrl) {
       doc.addImage(qrDataUrl, "PNG", margin, footerY - 6, 12, 12);
