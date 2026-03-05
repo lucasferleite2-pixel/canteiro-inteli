@@ -39,6 +39,7 @@ interface PlanejamentoPdfParams {
   fases: FasePlanejamento[];
   companyName?: string;
   companyLogoUrl?: string;
+  technicalResponsible?: string;
 }
 
 interface TocEntry {
@@ -46,9 +47,10 @@ interface TocEntry {
   page: number;
 }
 
-export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, companyName, companyLogoUrl }: PlanejamentoPdfParams) {
+export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, companyName, companyLogoUrl, technicalResponsible }: PlanejamentoPdfParams) {
   const doc = new jsPDF("p", "mm", "a4");
   const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
   const margin = 14;
   let y = margin;
 
@@ -75,8 +77,99 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
   }
 
   // ══════════════════════════════════════════
-  // PAGE 1: HEADER + KPIs
+  // COVER PAGE (Página de Rosto)
   // ══════════════════════════════════════════
+
+  // Blue banner top
+  doc.setFillColor(...BLUE);
+  doc.rect(0, 0, pageW, 6, "F");
+
+  // Blue banner bottom
+  doc.setFillColor(...BLUE);
+  doc.rect(0, pageH - 6, pageW, 6, "F");
+
+  // Logo centered
+  const coverLogoSize = 36;
+  let coverLogoBottom = 60;
+  if (logoImg) {
+    const lw = (logoImg.width / logoImg.height) * coverLogoSize;
+    const lx = (pageW - lw) / 2;
+    doc.addImage(logoImg, "PNG", lx, 30, lw, coverLogoSize);
+    coverLogoBottom = 30 + coverLogoSize + 10;
+  }
+
+  // Company name
+  if (companyName) {
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BLUE);
+    doc.text(companyName, pageW / 2, coverLogoBottom, { align: "center" });
+    coverLogoBottom += 10;
+  }
+
+  // Decorative line
+  doc.setDrawColor(...BLUE);
+  doc.setLineWidth(0.8);
+  doc.line(pageW * 0.25, coverLogoBottom, pageW * 0.75, coverLogoBottom);
+
+  // Title
+  const titleY = coverLogoBottom + 18;
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(30, 30, 30);
+  doc.text("Relatório de Planejamento", pageW / 2, titleY, { align: "center" });
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...GRAY);
+  doc.text("por Fase de Obra", pageW / 2, titleY + 10, { align: "center" });
+
+  // Obra name in a styled box
+  const obraBoxY = titleY + 26;
+  const obraBoxW = pageW * 0.6;
+  const obraBoxX = (pageW - obraBoxW) / 2;
+  doc.setFillColor(245, 247, 250);
+  doc.roundedRect(obraBoxX, obraBoxY, obraBoxW, 18, 3, 3, "F");
+  doc.setDrawColor(...BLUE);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(obraBoxX, obraBoxY, obraBoxW, 18, 3, 3, "S");
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(30, 30, 30);
+  doc.text(obraName, pageW / 2, obraBoxY + 11, { align: "center" });
+
+  // Metadata section
+  const metaY = obraBoxY + 34;
+  const metaLines: { label: string; value: string }[] = [
+    { label: "Data de Emissão", value: format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) },
+    { label: "Orçamento Total", value: formatCurrency(obraBudget) },
+    { label: "Fases Planejadas", value: String(fases.length) },
+  ];
+  if (technicalResponsible) {
+    metaLines.push({ label: "Responsável Técnico", value: technicalResponsible });
+  }
+
+  metaLines.forEach((item, i) => {
+    const my = metaY + i * 10;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...GRAY);
+    doc.text(item.label, pageW / 2 - 2, my, { align: "right" });
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 30, 30);
+    doc.text(item.value, pageW / 2 + 4, my);
+  });
+
+  // Confidential note at bottom
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(...GRAY);
+  doc.text("Documento gerado automaticamente — uso interno e confidencial", pageW / 2, pageH - 16, { align: "center" });
+
+  // ══════════════════════════════════════════
+  // PAGE 2: HEADER + KPIs
+  // ══════════════════════════════════════════
+  doc.addPage();
   const headerH = 32;
   doc.setFillColor(...BLUE);
   doc.rect(0, 0, pageW, headerH, "F");

@@ -61,7 +61,7 @@ export default function PlanejamentoFases() {
       if (!companyId) return null;
       const { data } = await supabase
         .from("companies")
-        .select("name, logo_url")
+        .select("name, logo_url, technical_responsible")
         .eq("id", companyId)
         .single();
       return data;
@@ -186,6 +186,7 @@ export default function PlanejamentoFases() {
                     fases: resolvedFases,
                     companyName: company?.name || undefined,
                     companyLogoUrl: company?.logo_url || undefined,
+                    technicalResponsible: company?.technical_responsible || undefined,
                   })
                 }
               >
