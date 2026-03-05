@@ -103,11 +103,14 @@ export function DiaryPhotoGallery({ entryId, companyId, compact = false }: Diary
               className="w-full h-full object-cover"
               loading="lazy"
             />
-            {photo.description && (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <p className="text-[10px] text-white truncate">{photo.description}</p>
-              </div>
-            )}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
+              {photo.file_name && (
+                <p className="text-[10px] text-white font-medium truncate">{photo.file_name}</p>
+              )}
+              {photo.captured_at && (
+                <p className="text-[9px] text-white/80">{format(new Date(photo.captured_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+              )}
+            </div>
           </button>
         ))}
       </div>
