@@ -72,8 +72,14 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
     setPending((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
   };
 
+  const hasEmptyNames = pending.some((p) => !p.displayName.trim());
+
   const uploadAll = async () => {
     if (!user || pending.length === 0) return;
+    if (hasEmptyNames) {
+      toast({ variant: "destructive", title: "Nome obrigatório", description: "Preencha o nome de todas as fotos antes de enviar." });
+      return;
+    }
     setUploading(true);
     setProgress(0);
 
@@ -169,7 +175,7 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
                     <Input
                       value={item.displayName}
                       onChange={(e) => updatePending(idx, "displayName", e.target.value)}
-                      className="h-8 text-sm"
+                      className={cn("h-8 text-sm", !item.displayName.trim() && "border-destructive")}
                       placeholder="Nome da foto"
                     />
                   </div>

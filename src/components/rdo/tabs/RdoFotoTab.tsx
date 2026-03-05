@@ -99,8 +99,14 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const hasEmptyNames = displayNames.some((n) => !n.trim());
+
   const handleUpload = async () => {
     if (!user || selectedFiles.length === 0) return;
+    if (hasEmptyNames) {
+      toast({ variant: "destructive", title: "Nome obrigatório", description: "Preencha o nome de todas as fotos antes de enviar." });
+      return;
+    }
     setUploading(true);
     try {
       const gps = await getGPSFromBrowser();
@@ -179,7 +185,7 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
                   <Input
                     value={displayNames[i] || ""}
                     onChange={(e) => setDisplayNames((prev) => prev.map((n, j) => j === i ? e.target.value : n))}
-                    className="h-7 text-sm"
+                    className={cn("h-7 text-sm", !displayNames[i]?.trim() && "border-destructive")}
                     placeholder="Nome da foto"
                   />
                 </div>
