@@ -388,6 +388,17 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
   }
 
   // ══════════════════════════════════════════
+  // BOOKMARKS (PDF Outline) for direct navigation
+  // ══════════════════════════════════════════
+  const outline = (doc as any).outline;
+  if (outline && typeof outline.add === "function") {
+    const root1 = outline.add(null, "Sumário", { pageNumber: tocPageNum });
+    for (const entry of tocEntries) {
+      outline.add(root1, entry.title, { pageNumber: entry.page });
+    }
+  }
+
+  // ══════════════════════════════════════════
   // QR CODE + FOOTER
   // ══════════════════════════════════════════
   const qrPayload = JSON.stringify({
