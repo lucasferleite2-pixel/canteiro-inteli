@@ -269,7 +269,11 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
                 </button>
               )}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                {f.descricao && <p className="text-[10px] text-white line-clamp-2">{f.descricao}</p>}
+                {f.file_name && <p className="text-[10px] text-white font-medium truncate">{f.file_name}</p>}
+                {f.data_captura && (
+                  <p className="text-[9px] text-white/80">{format(new Date(f.data_captura), "dd/MM/yyyy", { locale: ptBR })}</p>
+                )}
+                {f.descricao && <p className="text-[10px] text-white/90 line-clamp-1 mt-0.5">{f.descricao}</p>}
                 <div className="flex gap-1 mt-0.5">
                   {f.fase_obra && <Badge variant="secondary" className="text-[8px] h-4">{f.fase_obra}</Badge>}
                   {f.tag_risco && f.tag_risco !== "nenhuma" && (
