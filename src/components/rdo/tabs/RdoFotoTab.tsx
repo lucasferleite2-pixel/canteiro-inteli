@@ -1,13 +1,18 @@
 import { useState, useRef } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ImageIcon, Upload, X, Trash2 } from "lucide-react";
+import { Loader2, ImageIcon, Upload, X, Trash2, CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { compressImage, getGPSFromBrowser } from "@/lib/imageCompression";
@@ -35,6 +40,8 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
   const [showUpload, setShowUpload] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [displayNames, setDisplayNames] = useState<string[]>([]);
+  const [capturedDates, setCapturedDates] = useState<Date[]>([]);
   const [descricao, setDescricao] = useState("");
   const [faseObra, setFaseObra] = useState("");
   const [tagRisco, setTagRisco] = useState("nenhuma");
@@ -74,6 +81,8 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
     if (files.length === 0) return;
     setSelectedFiles(files);
     setPreviews(files.map((f) => URL.createObjectURL(f)));
+    setDisplayNames(files.map((f) => f.name.replace(/\.[^/.]+$/, "")));
+    setCapturedDates(files.map(() => new Date()));
     setShowUpload(true);
   };
 
@@ -81,6 +90,8 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
     setSelectedFiles([]);
     previews.forEach(URL.revokeObjectURL);
     setPreviews([]);
+    setDisplayNames([]);
+    setCapturedDates([]);
     setDescricao("");
     setFaseObra("");
     setTagRisco("nenhuma");
@@ -94,7 +105,8 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
     try {
       const gps = await getGPSFromBrowser();
 
-      for (const file of selectedFiles) {
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
         const compressed = await compressImage(file);
         const ext = compressed.name.split(".").pop() || "jpg";
         const path = `${companyId}/${rdoDiaId}/${crypto.randomUUID()}.${ext}`;
@@ -105,7 +117,7 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
         const { error: dbErr } = await supabase.from("rdo_foto").insert({
           rdo_dia_id: rdoDiaId,
           company_id: companyId,
-          file_name: file.name,
+          file_name: displayNames[i] || file.name,
           storage_path: path,
           descricao: descricao || null,
           fase_obra: faseObra || null,
@@ -113,7 +125,7 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
           uploaded_by: user.id,
           latitude: gps?.latitude ?? null,
           longitude: gps?.longitude ?? null,
-          data_captura: new Date().toISOString(),
+          data_captura: capturedDates[i]?.toISOString() || new Date().toISOString(),
         });
         if (dbErr) throw dbErr;
       }
@@ -157,10 +169,44 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={clearForm}><X className="h-4 w-4" /></Button>
           </div>
 
-          {/* Previews */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {previews.map((src, i) => (
-              <img key={i} src={src} alt="" className="h-20 w-20 rounded object-cover border shrink-0" />
+          {/* Per-file name & date */}
+          <div className="space-y-2 max-h-[250px] overflow-y-auto">
+            {selectedFiles.map((file, i) => (
+              <div key={i} className="flex gap-2 items-center p-2 rounded border bg-card">
+                <img src={previews[i]} alt="" className="h-12 w-12 rounded object-cover shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Nome</Label>
+                  <Input
+                    value={displayNames[i] || ""}
+                    onChange={(e) => setDisplayNames((prev) => prev.map((n, j) => j === i ? e.target.value : n))}
+                    className="h-7 text-sm"
+                    placeholder="Nome da foto"
+                  />
+                </div>
+                <div className="w-36 shrink-0">
+                  <Label className="text-xs text-muted-foreground">Data</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("h-7 w-full justify-start text-left text-xs font-normal")}>
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {format(capturedDates[i] || new Date(), "dd/MM/yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={capturedDates[i]}
+                        onSelect={(date) => {
+                          if (date) setCapturedDates((prev) => prev.map((d, j) => j === i ? date : d));
+                        }}
+                        locale={ptBR}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
             ))}
           </div>
 
