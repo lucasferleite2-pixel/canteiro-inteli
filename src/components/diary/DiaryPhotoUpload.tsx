@@ -1,11 +1,16 @@
 import { useState, useRef } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
-import { Camera, Loader2, X, Upload } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Camera, CalendarIcon, Loader2, X, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +28,8 @@ interface DiaryPhotoUploadProps {
 interface PendingFile {
   file: File;
   preview: string;
+  displayName: string;
+  capturedAt: Date;
   description: string;
   activity: string;
   contractId: string;
@@ -44,6 +51,8 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
     const newPending: PendingFile[] = files.map((f) => ({
       file: f,
       preview: URL.createObjectURL(f),
+      displayName: f.name.replace(/\.[^/.]+$/, ""),
+      capturedAt: new Date(),
       description: "",
       activity: "",
       contractId: "",
@@ -89,7 +98,7 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
           project_id: projectId,
           uploaded_by: user.id,
           storage_path: path,
-          file_name: item.file.name,
+          file_name: item.displayName || item.file.name,
           file_size: compressed.size,
           mime_type: "image/jpeg",
           description: item.description || null,
@@ -97,7 +106,7 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
           contract_id: item.contractId || null,
           latitude: gps?.latitude ?? null,
           longitude: gps?.longitude ?? null,
-          captured_at: new Date().toISOString(),
+          captured_at: item.capturedAt.toISOString(),
         });
 
         if (metaErr) throw metaErr;
@@ -154,7 +163,42 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
                 </button>
               </div>
               <div className="flex-1 space-y-2 min-w-0">
-                <p className="text-xs text-muted-foreground truncate">{item.file.name}</p>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">Nome da foto</Label>
+                    <Input
+                      value={item.displayName}
+                      onChange={(e) => updatePending(idx, "displayName", e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder="Nome da foto"
+                    />
+                  </div>
+                  <div className="w-40">
+                    <Label className="text-xs text-muted-foreground">Data da captura</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("h-8 w-full justify-start text-left text-sm font-normal", !item.capturedAt && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                          {format(item.capturedAt, "dd/MM/yyyy")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={item.capturedAt}
+                          onSelect={(date) => {
+                            if (date) {
+                              setPending((prev) => prev.map((p, i) => i === idx ? { ...p, capturedAt: date } : p));
+                            }
+                          }}
+                          locale={ptBR}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
                 <Input
                   placeholder="Descrição técnica da foto"
                   value={item.description}
