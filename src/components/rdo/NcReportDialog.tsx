@@ -36,6 +36,7 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   projectName: string;
+  projectAddress?: string;
 }
 
 function createEmptyItem(): NcItem {
