@@ -114,6 +114,7 @@ export default function EmpresaConfig() {
         address: address.trim() || null,
         phone: phone.trim() || null,
         technical_responsible: technicalResponsible.trim() || null,
+        crea_cau: creaCau.trim() || null,
         brand_color: brandColor,
       })
       .eq("id", companyId);
