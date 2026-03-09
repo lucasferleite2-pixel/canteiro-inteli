@@ -335,7 +335,7 @@ export async function generateNaoConformidadePDF(
   });
 
   // Severity badge summary on cover
-  const badgeY = infoStartY + 82;
+  const badgeY = infoStartY + 90;
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
