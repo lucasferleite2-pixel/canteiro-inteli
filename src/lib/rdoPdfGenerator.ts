@@ -79,6 +79,7 @@ export interface RdoDia {
 
 export interface RdoPdfOptions {
   projectName: string;
+  municipality?: string;
   companyName?: string;
   companyAddress?: string;
   companyPhone?: string;
