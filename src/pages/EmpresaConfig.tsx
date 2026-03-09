@@ -41,6 +41,7 @@ export default function EmpresaConfig() {
         setAddress(data.address || "");
         setPhone(data.phone || "");
         setTechnicalResponsible(data.technical_responsible || "");
+        setCreaCau(data.crea_cau || "");
         setBrandColor(data.brand_color || "#1E40AF");
         setLogoUrl(data.logo_url || null);
       }
