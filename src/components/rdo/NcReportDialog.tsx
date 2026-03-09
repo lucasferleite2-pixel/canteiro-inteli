@@ -126,6 +126,7 @@ export function NcReportDialog({ open, onOpenChange, projectName, projectAddress
       await generateNaoConformidadePDF(
         {
           projectName,
+          municipality: municipality || undefined,
           companyName: companyName || undefined,
           companyAddress: companyAddress || undefined,
           companyPhone: companyPhone || undefined,
