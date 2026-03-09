@@ -74,7 +74,8 @@ export function NcReportDialog({ open, onOpenChange, projectName, projectAddress
 
   useEffect(() => {
     if (open && companyId) loadCompanyData();
-  }, [open, companyId]);
+    if (open && projectAddress) setMunicipality(projectAddress);
+  }, [open, companyId, projectAddress]);
 
   const loadCompanyData = async () => {
     if (!companyId) return;
