@@ -98,6 +98,7 @@ export interface NcItem {
 
 export interface NcPdfOptions {
   projectName: string;
+  municipality?: string;
   companyName?: string;
   companyAddress?: string;
   companyPhone?: string;
