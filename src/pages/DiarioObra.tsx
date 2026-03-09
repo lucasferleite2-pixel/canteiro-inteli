@@ -304,6 +304,10 @@ export default function DiarioObra() {
                 {ai.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 Resumo IA
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowNcReport(true)} className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                Laudo NC
+              </Button>
             </>
           )}
           <Button onClick={() => setShowNewRdo(true)} disabled={!selectedProject}>
