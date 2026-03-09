@@ -5,8 +5,22 @@ import { ptBR } from "date-fns/locale";
 import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
 
-const BLUE = [30, 64, 175] as const;
-const GRAY = [107, 114, 128] as const;
+// ── Design Constants (Institutional) ──
+const BLUE_TECH: [number, number, number] = [15, 47, 87];    // #0f2f57
+const GRAY_LIGHT: [number, number, number] = [232, 237, 244]; // #e8edf4
+const ACCENT: [number, number, number] = [44, 123, 229];      // #2c7be5
+const GRAY_TEXT: [number, number, number] = [107, 114, 128];
+const DARK_TEXT: [number, number, number] = [30, 30, 30];
+const WARN_BG: [number, number, number] = [255, 251, 235];
+const WARN_BORDER: [number, number, number] = [234, 179, 8];
+
+// Margins: top 30mm, bottom 25mm, left 20mm, right 20mm
+const ML = 20;
+const MR = 20;
+const MT_FIRST = 30;
+const MB = 25;
+const HEADER_H = 22; // header reserved space on pages > 1
+const FOOTER_H = 12;
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -19,6 +33,9 @@ function fmtDate(d: string) {
 function fmtDateShort(d: string) {
   try { return format(new Date(d + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }); } catch { return d; }
 }
+function fmtDateTime(d: string) {
+  try { return format(new Date(d), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }); } catch { return d; }
+}
 
 async function computeHash(content: string): Promise<string> {
   const data = new TextEncoder().encode(content);
@@ -27,7 +44,7 @@ async function computeHash(content: string): Promise<string> {
 }
 
 async function generateQR(text: string): Promise<string> {
-  return QRCode.toDataURL(text, { width: 120, margin: 1 });
+  return QRCode.toDataURL(text, { width: 140, margin: 1 });
 }
 
 async function loadImageAsBase64(url: string): Promise<string | null> {
@@ -44,7 +61,6 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 }
 
 // ── Types ──
-
 export interface RdoDia {
   id: string;
   data: string;
@@ -80,7 +96,6 @@ export interface RdoPdfOptions {
 }
 
 // ── Fetch sub-data ──
-
 async function fetchAtividades(rdoDiaId: string) {
   const { data } = await supabase.from("rdo_atividade").select("*").eq("rdo_dia_id", rdoDiaId).order("created_at");
   return data || [];
@@ -105,32 +120,25 @@ async function fetchFotos(rdoDiaId: string) {
   });
 }
 
-// ── Chart helpers (drawn with jsPDF primitives) ──
-
+// ── Chart helpers ──
 function drawBarChart(
   doc: jsPDF, x: number, y: number, w: number, h: number,
   data: { label: string; value: number; color: [number, number, number] }[],
-  title: string, unit: string, BC: readonly [number, number, number]
+  title: string, unit: string, BC: [number, number, number]
 ) {
-  // Title
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BC[0], BC[1], BC[2]);
   doc.text(title, x, y - 4);
-
   const maxVal = Math.max(...data.map((d) => d.value), 1);
   const barW = Math.min(14, (w - 10) / data.length - 2);
   const chartBottom = y + h;
   const chartTop = y + 4;
   const chartH = chartBottom - chartTop;
-
-  // Axis
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.3);
   doc.line(x, chartTop, x, chartBottom);
   doc.line(x, chartBottom, x + w, chartBottom);
-
-  // Grid lines
   for (let i = 0; i <= 4; i++) {
     const gy = chartBottom - (chartH * i) / 4;
     doc.setDrawColor(230, 230, 230);
@@ -139,37 +147,27 @@ function drawBarChart(
     doc.setTextColor(150, 150, 150);
     doc.text(String(Math.round((maxVal * i) / 4)) + unit, x - 2, gy + 1, { align: "right" });
   }
-
-  // Bars
   data.forEach((d, i) => {
     const bx = x + 6 + i * (barW + 3);
     const bh = (d.value / maxVal) * chartH;
     const by = chartBottom - bh;
     doc.setFillColor(d.color[0], d.color[1], d.color[2]);
     doc.roundedRect(bx, by, barW, bh, 1, 1, "F");
-    // Label
     doc.setFontSize(5);
     doc.setTextColor(80, 80, 80);
-    const label = d.label.length > 5 ? d.label.substring(0, 5) : d.label;
-    doc.text(label, bx + barW / 2, chartBottom + 4, { align: "center" });
+    doc.text(d.label.substring(0, 5), bx + barW / 2, chartBottom + 4, { align: "center" });
   });
 }
 
 function drawGauge(
   doc: jsPDF, cx: number, cy: number, radius: number,
-  value: number, label: string, BC: readonly [number, number, number]
+  value: number, label: string, BC: [number, number, number]
 ) {
-  // Background arc (simple filled circle segments)
   const r = radius;
   doc.setFillColor(230, 230, 230);
   doc.circle(cx, cy, r, "F");
-
-  // Value sector
   const clampedVal = Math.min(100, Math.max(0, value));
   const color: [number, number, number] = clampedVal >= 70 ? [34, 197, 94] : clampedVal >= 50 ? [234, 179, 8] : [239, 68, 68];
-  doc.setFillColor(color[0], color[1], color[2]);
-
-  // Draw as pie slice approximation
   const startAngle = -Math.PI / 2;
   const endAngle = startAngle + (clampedVal / 100) * 2 * Math.PI;
   const segments = Math.max(2, Math.round(clampedVal / 2));
@@ -178,39 +176,147 @@ function drawGauge(
     const a = startAngle + (i / segments) * (endAngle - startAngle);
     points.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
   }
-  // Draw polygon
   if (points.length > 2) {
     doc.setFillColor(color[0], color[1], color[2]);
-    const path = points.map((p, i) => `${i === 0 ? "" : ""}${p[0].toFixed(2)} ${p[1].toFixed(2)}`);
-    // Use triangle fan approach
     for (let i = 1; i < points.length - 1; i++) {
-      doc.triangle(
-        points[0][0], points[0][1],
-        points[i][0], points[i][1],
-        points[i + 1][0], points[i + 1][1],
-        "F"
-      );
+      doc.triangle(points[0][0], points[0][1], points[i][0], points[i][1], points[i + 1][0], points[i + 1][1], "F");
     }
   }
-
-  // Inner white circle
   doc.setFillColor(255, 255, 255);
   doc.circle(cx, cy, r * 0.6, "F");
-
-  // Value text
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(40, 40, 40);
   doc.text(`${clampedVal}%`, cx, cy + 2, { align: "center" });
-
-  // Label
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
+  doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
   doc.text(label, cx, cy + r + 6, { align: "center" });
 }
 
-// ── Main generator ──
+// ── Helpers ──
+
+function addWatermark(doc: jsPDF, text: string) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.saveGraphicsState();
+  doc.setGState(new (doc as any).GState({ opacity: 0.06 }));
+  doc.setFontSize(50);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(BLUE_TECH[0], BLUE_TECH[1], BLUE_TECH[2]);
+  // Rotated watermark
+  const cx = pageW / 2;
+  const cy = pageH / 2;
+  doc.text(text.toUpperCase(), cx, cy, { align: "center", angle: 45 });
+  doc.restoreGraphicsState();
+}
+
+function addInstitutionalHeader(
+  doc: jsPDF, projectName: string, companyName?: string,
+  technicalResponsible?: string, logoBase64?: string | null,
+  BC: [number, number, number] = BLUE_TECH
+) {
+  const pageW = doc.internal.pageSize.getWidth();
+  // Blue top line
+  doc.setFillColor(BC[0], BC[1], BC[2]);
+  doc.rect(0, 0, pageW, 2.5, "F");
+
+  let hx = ML;
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, "PNG", hx, 4, 12, 6); hx += 14; } catch {}
+  }
+  // Left: Company/Project
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(BC[0], BC[1], BC[2]);
+  doc.text("RELATÓRIO TÉCNICO DE ACOMPANHAMENTO DE OBRA", hx, 8);
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+  doc.text(`Obra: ${projectName}`, hx, 12);
+
+  // Right: responsible + date info
+  const rightX = pageW - MR;
+  if (technicalResponsible) {
+    doc.setFontSize(6);
+    doc.text(`Resp. Técnico: ${technicalResponsible}`, rightX, 8, { align: "right" });
+  }
+  if (companyName) {
+    doc.text(companyName, rightX, 12, { align: "right" });
+  }
+
+  // Divider line
+  doc.setDrawColor(BC[0], BC[1], BC[2]);
+  doc.setLineWidth(0.3);
+  doc.line(ML, 15, pageW - MR, 15);
+}
+
+function addInstitutionalFooter(
+  doc: jsPDF, pageNum: number, totalPages: number,
+  reportId: string, shortHash: string, companyName?: string, generatedAt?: string
+) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const fy = pageH - MB + 8;
+
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.2);
+  doc.line(ML, fy, pageW - MR, fy);
+
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(140, 140, 140);
+  doc.text("Relatório Técnico de Acompanhamento de Obra — Documento gerado automaticamente pelo ERP", ML, fy + 4);
+  if (generatedAt) {
+    doc.text(`Data de geração: ${generatedAt}`, ML, fy + 8);
+  }
+  doc.text(`Página ${pageNum} de ${totalPages}`, pageW - MR, fy + 4, { align: "right" });
+  if (companyName) {
+    doc.text(companyName, pageW - MR, fy + 8, { align: "right" });
+  }
+}
+
+function addSectionTitle(doc: jsPDF, title: string, y: number, BC: [number, number, number] = BLUE_TECH): number {
+  const pageW = doc.internal.pageSize.getWidth();
+  // Decorative line
+  doc.setDrawColor(BC[0], BC[1], BC[2]);
+  doc.setLineWidth(0.6);
+  doc.line(ML, y - 2, pageW - MR, y - 2);
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(BC[0], BC[1], BC[2]);
+  doc.text(title, ML, y + 4);
+
+  doc.setLineWidth(0.3);
+  doc.line(ML, y + 7, pageW - MR, y + 7);
+
+  return y + 12;
+}
+
+function ensureSpace(doc: jsPDF, y: number, needed: number): number {
+  const pageH = doc.internal.pageSize.getHeight();
+  if (y + needed > pageH - MB) {
+    doc.addPage();
+    return HEADER_H + 4;
+  }
+  return y;
+}
+
+function addBodyText(doc: jsPDF, text: string, y: number, maxW?: number): number {
+  const pageW = doc.internal.pageSize.getWidth();
+  const w = maxW || (pageW - ML - MR);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+  const lines = doc.splitTextToSize(text, w);
+  doc.text(lines, ML, y);
+  return y + lines.length * 4.2 + 2;
+}
+
+// ══════════════════════════════════════════════════════
+// MAIN GENERATOR
+// ══════════════════════════════════════════════════════
 
 export async function generateRdoPDF(
   options: RdoPdfOptions,
@@ -220,140 +326,528 @@ export async function generateRdoPDF(
   const {
     projectName, companyName, companyAddress, companyPhone, technicalResponsible,
     rdos, userName, aiSummary, logoBase64, brandColor,
-    includePhotos = true, includeActivities = true, includeOccurrences = true, includeMaterials = true, includeDespesas = true,
+    includePhotos = true, includeActivities = true, includeOccurrences = true,
+    includeMaterials = true, includeDespesas = true,
   } = options;
 
-  const BC = brandColor ? hexToRgb(brandColor) : BLUE;
-  const doc = new jsPDF();
+  const BC: [number, number, number] = brandColor ? hexToRgb(brandColor) : BLUE_TECH;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
   const now = new Date();
   const generatedAt = format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-  const reportId = `RDO2-${format(now, "yyyyMMddHHmmss")}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-  // Height reserved for the header drawn in the final loop (pages > 1)
-  const HEADER_OFFSET = 20;
+  const reportId = `RTAO-${format(now, "yyyyMMddHHmmss")}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
+  const contentW = pageW - ML - MR;
 
-  // Hash
+  // Hash & QR
   onProgress?.("Calculando hash de integridade...");
   const integrityHash = await computeHash(JSON.stringify({ reportId, projectName, generated: now.toISOString(), count: rdos.length, ids: rdos.map((r) => r.id) }));
   const shortHash = integrityHash.substring(0, 16).toUpperCase();
-
-  // QR
   onProgress?.("Gerando QR Code...");
   const qrDataUrl = await generateQR(JSON.stringify({ id: reportId, hash: shortHash, project: projectName, entries: rdos.length, generated: now.toISOString() }));
 
-  // Sort chronologically
   const sorted = [...rdos].sort((a, b) => a.data.localeCompare(b.data));
+  const period = sorted.length > 0 ? `${fmtDateShort(sorted[0].data)} a ${fmtDateShort(sorted[sorted.length - 1].data)}` : "—";
 
-  // Bookmark & TOC tracking
+  // Bookmark tracking
   const bookmarks: { title: string; page: number; children?: { title: string; page: number }[] }[] = [];
   function trackSection(title: string) {
     bookmarks.push({ title, page: doc.getNumberOfPages() });
   }
 
-  // ═══════════════════════════════════════
-  // PAGE 1: COVER
-  // ═══════════════════════════════════════
-  onProgress?.("Gerando capa...");
-  doc.setFillColor(BC[0], BC[1], BC[2]);
-  doc.rect(0, 0, pageW, 8, "F");
-  doc.rect(0, pageH - 8, pageW, 8, "F");
-
-  if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", (pageW - 50) / 2, 16, 50, 25); } catch {}
+  // Pre-fetch all sub-data to avoid N+1 queries per RDO during rendering
+  onProgress?.("Carregando dados detalhados...");
+  const allAtividades: Record<string, any[]> = {};
+  const allOcorrencias: Record<string, any[]> = {};
+  const allMateriais: Record<string, any[]> = {};
+  const allDespesas: Record<string, any[]> = {};
+  const allFotos: Record<string, any[]> = {};
+  
+  for (const rdo of sorted) {
+    const [atividades, ocorrencias, materiais, despesas, fotos] = await Promise.all([
+      includeActivities ? fetchAtividades(rdo.id) : Promise.resolve([]),
+      includeOccurrences ? fetchOcorrencias(rdo.id) : Promise.resolve([]),
+      includeMaterials ? fetchMateriais(rdo.id) : Promise.resolve([]),
+      includeDespesas ? fetchDespesas(rdo.id) : Promise.resolve([]),
+      includePhotos ? fetchFotos(rdo.id) : Promise.resolve([]),
+    ]);
+    allAtividades[rdo.id] = atividades;
+    allOcorrencias[rdo.id] = ocorrencias;
+    allMateriais[rdo.id] = materiais;
+    allDespesas[rdo.id] = despesas;
+    allFotos[rdo.id] = fotos;
   }
 
-  doc.setFontSize(28);
+  // ══════════════════════════════════════════
+  // 1. CAPA INSTITUCIONAL
+  // ══════════════════════════════════════════
+  onProgress?.("Gerando capa institucional...");
+
+  // Top band
+  doc.setFillColor(BC[0], BC[1], BC[2]);
+  doc.rect(0, 0, pageW, 50, "F");
+
+  // Logo on cover
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, "PNG", (pageW - 40) / 2, 8, 40, 20); } catch {}
+  }
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(255, 255, 255);
+  doc.text("DIÁRIO TÉCNICO DE EXECUÇÃO", pageW / 2, 38, { align: "center" });
+  doc.setFontSize(7);
+  doc.text(companyName || "", pageW / 2, 44, { align: "center" });
+
+  // Main title
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BC[0], BC[1], BC[2]);
-  doc.text("RELATÓRIO RDO 2.0", pageW / 2, 52, { align: "center" });
-  doc.setFontSize(14);
-  doc.text("DIÁRIO DE OBRA INTELIGENTE", pageW / 2, 62, { align: "center" });
+  doc.text("RELATÓRIO TÉCNICO DE", pageW / 2, 72, { align: "center" });
+  doc.text("ACOMPANHAMENTO DE OBRA", pageW / 2, 82, { align: "center" });
 
+  // Divider
   doc.setDrawColor(BC[0], BC[1], BC[2]);
-  doc.setLineWidth(0.8);
-  doc.line(50, 68, pageW - 50, 68);
+  doc.setLineWidth(1);
+  doc.line(60, 90, pageW - 60, 90);
 
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(40, 40, 40);
-  doc.text(projectName, pageW / 2, 80, { align: "center" });
+  // Project info box
+  const infoStartY = 100;
+  doc.setFillColor(GRAY_LIGHT[0], GRAY_LIGHT[1], GRAY_LIGHT[2]);
+  doc.roundedRect(30, infoStartY, pageW - 60, 70, 2, 2, "F");
 
-  let detailY = 88;
   doc.setFontSize(10);
-  doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-  if (companyName) { doc.text(companyName, pageW / 2, detailY, { align: "center" }); detailY += 6; }
-  doc.setFontSize(8);
-  if (companyAddress) { doc.text(companyAddress, pageW / 2, detailY, { align: "center" }); detailY += 5; }
-  if (companyPhone) { doc.text(`Tel: ${companyPhone}`, pageW / 2, detailY, { align: "center" }); detailY += 5; }
-  if (technicalResponsible) { doc.text(`Resp. Técnico: ${technicalResponsible}`, pageW / 2, detailY, { align: "center" }); }
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
 
-  // Metadata box
-  const boxY = 115;
-  doc.setFillColor(245, 247, 250);
-  doc.roundedRect(30, boxY, pageW - 60, 55, 3, 3, "F");
-
-  doc.setFontSize(9);
-  doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-  const period = sorted.length > 0 ? `${fmtDateShort(sorted[0].data)} a ${fmtDateShort(sorted[sorted.length - 1].data)}` : "—";
-  const meta = [
-    `Nº do Relatório: ${reportId}`,
-    `Data de Geração: ${generatedAt}`,
-    `Gerado por: ${userName || "Sistema"}`,
-    `Total de Registros RDO: ${rdos.length}`,
-    `Período: ${period}`,
-    `Tipo: Relatório RDO 2.0 — Dados Estruturados`,
+  const coverInfo: [string, string][] = [
+    ["Obra:", projectName],
+    ["Empresa Executora:", companyName || "—"],
+    ["Endereço:", companyAddress || "—"],
+    ["Período:", period],
+    ["Data do Relatório:", generatedAt],
+    ["Responsável Técnico:", technicalResponsible || "—"],
+    ["Nº do Documento:", reportId],
   ];
-  meta.forEach((line, i) => doc.text(line, 38, boxY + 10 + i * 8));
 
-  doc.addImage(qrDataUrl, "PNG", pageW - 70, boxY + 4, 30, 30);
+  coverInfo.forEach(([label, value], i) => {
+    const ly = infoStartY + 10 + i * 8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(label, 38, ly);
+    doc.setFont("helvetica", "normal");
+    doc.text(value, 90, ly);
+  });
+
+  // QR on cover
+  doc.addImage(qrDataUrl, "PNG", pageW - 70, infoStartY + 30, 28, 28);
   doc.setFontSize(6);
-  doc.text("Verificação", pageW - 55, boxY + 37, { align: "center" });
-  doc.setFontSize(7);
-  doc.text(`Hash de Integridade (SHA-256): ${shortHash}`, pageW / 2, boxY + 51, { align: "center" });
+  doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+  doc.text("Autenticidade", pageW - 56, infoStartY + 62, { align: "center" });
 
+  // Bottom band
+  doc.setFillColor(BC[0], BC[1], BC[2]);
+  doc.rect(0, pageH - 20, pageW, 20, "F");
   doc.setFontSize(7);
-  doc.setTextColor(150, 150, 150);
-  doc.text("Documento gerado pelo sistema Canteiro Inteli — RDO 2.0", pageW / 2, pageH - 16, { align: "center" });
+  doc.setTextColor(255, 255, 255);
+  doc.text(`Hash de Integridade (SHA-256): ${shortHash}`, pageW / 2, pageH - 12, { align: "center" });
+  doc.text("Documento gerado automaticamente pelo ERP Canteiro Inteli", pageW / 2, pageH - 6, { align: "center" });
 
-  // ═══════════════════════════════════════
-  // COMPUTE KPIs
-  // ═══════════════════════════════════════
+  // ══════════════════════════════════════════
+  // 2. SUMÁRIO (placeholder, filled at end)
+  // ══════════════════════════════════════════
+  doc.addPage();
+  trackSection("SUMÁRIO");
+  const tocPageNum = doc.getNumberOfPages();
+
+  // ══════════════════════════════════════════
+  // SECTION 1: IDENTIFICAÇÃO DO RELATÓRIO
+  // ══════════════════════════════════════════
+  onProgress?.("Gerando identificação...");
+  doc.addPage();
+  trackSection("1. IDENTIFICAÇÃO DO RELATÓRIO");
+  let y = addSectionTitle(doc, "1. IDENTIFICAÇÃO DO RELATÓRIO", HEADER_H + 4, BC);
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Item", "Informação"]],
+    body: [
+      ["Obra", projectName],
+      ["Empresa Executora", companyName || "—"],
+      ["Endereço", companyAddress || "—"],
+      ["Telefone", companyPhone || "—"],
+      ["Período de Registros", period],
+      ["Total de Registros RDO", String(sorted.length)],
+      ["Data de Geração", generatedAt],
+      ["Gerado por", userName || "Sistema"],
+      ["Responsável Técnico", technicalResponsible || "—"],
+      ["Nº do Documento", reportId],
+    ],
+    theme: "grid",
+    headStyles: { fillColor: [BC[0], BC[1], BC[2]], font: "helvetica", fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 55 } },
+    margin: { left: ML, right: MR, top: HEADER_H + 4 },
+  });
+
+  // ══════════════════════════════════════════
+  // SECTION 2: OBJETIVO
+  // ══════════════════════════════════════════
+  doc.addPage();
+  trackSection("2. OBJETIVO");
+  y = addSectionTitle(doc, "2. OBJETIVO", HEADER_H + 4, BC);
+  y = addBodyText(doc,
+    "O presente relatório técnico tem por finalidade registrar as atividades executadas na obra, " +
+    "bem como documentar ocorrências relevantes, condições de execução e evidências fotográficas " +
+    "referentes ao período do registro. Este documento é parte integrante do Diário de Obra e " +
+    "possui caráter técnico e documental, sendo adequado para fins de fiscalização, auditoria " +
+    "e processos administrativos.",
+    y
+  );
+
+  // ══════════════════════════════════════════
+  // SECTION 3: METODOLOGIA
+  // ══════════════════════════════════════════
+  y = ensureSpace(doc, y + 6, 40);
+  if (y <= HEADER_H + 10) {
+    trackSection("3. METODOLOGIA");
+  }
+  y = addSectionTitle(doc, "3. METODOLOGIA", y, BC);
+  y = addBodyText(doc,
+    "As informações contidas neste relatório foram obtidas por meio de acompanhamento técnico " +
+    "da obra, registros fotográficos georreferenciados, observações de campo, comunicação com " +
+    "a equipe executora e dados inseridos no sistema de gestão de obras (ERP). " +
+    "Os registros fotográficos foram obtidos in loco e possuem metadados de data/hora e, quando " +
+    "disponível, coordenadas GPS. Os dados quantitativos de produtividade, custo e avanço físico " +
+    "foram registrados diariamente pelo responsável técnico da obra.",
+    y
+  );
+
+  // ══════════════════════════════════════════
+  // SECTION 4: DESCRIÇÃO DAS ATIVIDADES
+  // ══════════════════════════════════════════
+  if (includeActivities) {
+    onProgress?.("Gerando descrição das atividades...");
+    doc.addPage();
+    trackSection("4. DESCRIÇÃO DAS ATIVIDADES EXECUTADAS");
+    y = addSectionTitle(doc, "4. DESCRIÇÃO DAS ATIVIDADES EXECUTADAS", HEADER_H + 4, BC);
+
+    for (let idx = 0; idx < sorted.length; idx++) {
+      const rdo = sorted[idx];
+      const atividades = allAtividades[rdo.id] || [];
+      if (atividades.length === 0) continue;
+
+      y = ensureSpace(doc, y, 20);
+
+      // Date sub-header
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(BC[0], BC[1], BC[2]);
+      doc.text(`${fmtDate(rdo.data)} — ${rdo.fase_obra || "Fase não informada"}`, ML, y);
+      y += 2;
+
+      // Metadata line
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+      doc.text(`Clima: ${rdo.clima}  |  Equipe: ${rdo.equipe_total}  |  Horas: ${rdo.horas_trabalhadas}h  |  Risco: ${rdo.risco_dia || "baixo"}`, ML, y + 4);
+      y += 8;
+
+      // Activities as bullet points
+      for (const a of atividades) {
+        y = ensureSpace(doc, y, 8);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+        const bullet = `• ${a.descricao}`;
+        const lines = doc.splitTextToSize(bullet, contentW - 5);
+        doc.text(lines, ML + 3, y);
+        y += lines.length * 4.2;
+
+        // Status indicators
+        doc.setFontSize(7);
+        doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+        const statusParts = [
+          `Tipo: ${a.tipo_atividade}`,
+          a.concluida ? "✓ Concluída" : "○ Em andamento",
+          a.impacto_cronograma && a.impacto_cronograma !== "nenhum" ? `Impacto: ${a.impacto_cronograma}` : null,
+        ].filter(Boolean).join("  |  ");
+        doc.text(statusParts, ML + 6, y);
+        y += 5;
+      }
+
+      // General observations
+      if (rdo.observacoes_gerais) {
+        y = ensureSpace(doc, y, 10);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(80, 80, 80);
+        const obsLines = doc.splitTextToSize(`Obs: ${rdo.observacoes_gerais}`, contentW - 10);
+        doc.text(obsLines, ML + 3, y);
+        y += obsLines.length * 3.8 + 4;
+      }
+
+      y += 4; // spacing between days
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // SECTION 5: OCORRÊNCIAS E FATOS RELEVANTES
+  // ══════════════════════════════════════════
+  if (includeOccurrences) {
+    onProgress?.("Gerando ocorrências...");
+    const hasAnyOcorrencia = sorted.some((r) => (allOcorrencias[r.id] || []).length > 0);
+    
+    doc.addPage();
+    trackSection("5. OCORRÊNCIAS E FATOS RELEVANTES");
+    y = addSectionTitle(doc, "5. OCORRÊNCIAS E FATOS RELEVANTES", HEADER_H + 4, BC);
+
+    if (!hasAnyOcorrencia) {
+      y = addBodyText(doc, "Não foram registradas ocorrências relevantes no período analisado.", y);
+    } else {
+      for (const rdo of sorted) {
+        const ocorrencias = allOcorrencias[rdo.id] || [];
+        if (ocorrencias.length === 0) continue;
+
+        y = ensureSpace(doc, y, 30);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(BC[0], BC[1], BC[2]);
+        doc.text(fmtDate(rdo.data), ML, y);
+        y += 6;
+
+        for (const o of ocorrencias) {
+          y = ensureSpace(doc, y, 25);
+
+          // Warning box
+          doc.setFillColor(WARN_BG[0], WARN_BG[1], WARN_BG[2]);
+          doc.setDrawColor(WARN_BORDER[0], WARN_BORDER[1], WARN_BORDER[2]);
+          doc.setLineWidth(0.5);
+
+          const descLines = doc.splitTextToSize(o.descricao, contentW - 16);
+          const boxH = 14 + descLines.length * 4;
+          doc.roundedRect(ML, y, contentW, boxH, 1, 1, "FD");
+
+          // Warning header
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(180, 120, 0);
+          doc.text("⚠ OCORRÊNCIA TÉCNICA REGISTRADA", ML + 4, y + 5);
+
+          // Type and impact badges
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+          const meta = [`Tipo: ${o.tipo_ocorrencia}`, `Impacto: ${o.impacto || "baixo"}`];
+          if (o.responsavel) meta.push(`Responsável: ${o.responsavel}`);
+          if (o.gera_risco_contratual) meta.push("⚠️ RISCO CONTRATUAL");
+          doc.text(meta.join("  |  "), ML + 4, y + 10);
+
+          // Description
+          doc.setFontSize(9);
+          doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+          doc.text(descLines, ML + 4, y + 16);
+
+          y += boxH + 6;
+        }
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // SECTION 6: DESPESAS DO PERÍODO
+  // ══════════════════════════════════════════
+  if (includeDespesas) {
+    onProgress?.("Gerando despesas...");
+    const hasAnyDespesa = sorted.some((r) => (allDespesas[r.id] || []).filter((d: any) => d.incluir_no_pdf).length > 0);
+
+    if (hasAnyDespesa) {
+      doc.addPage();
+      trackSection("6. DESPESAS DO PERÍODO");
+      y = addSectionTitle(doc, "6. DESPESAS DO PERÍODO", HEADER_H + 4, BC);
+
+      const tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mão de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
+      let totalGeral = 0;
+
+      for (const rdo of sorted) {
+        const despesas = (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf);
+        if (despesas.length === 0) continue;
+
+        y = ensureSpace(doc, y, 20);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(BC[0], BC[1], BC[2]);
+        doc.text(fmtDateShort(rdo.data), ML, y);
+        y += 2;
+
+        autoTable(doc, {
+          startY: y,
+          head: [["Descrição", "Tipo", "Qtd", "Unid.", "V. Unit.", "V. Total"]],
+          body: despesas.map((d: any) => [
+            d.descricao.substring(0, 50),
+            tipoLabels[d.tipo] || d.tipo,
+            String(d.quantidade || 0),
+            d.unidade || "un",
+            `R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+            `R$ ${Number(d.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+          ]),
+          theme: "grid",
+          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
+          styles: { fontSize: 7, cellPadding: 2 },
+          margin: { left: ML, right: MR, top: HEADER_H + 4 },
+        });
+        y = (doc as any).lastAutoTable?.finalY + 2 || y + 20;
+        const subtotal = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+        totalGeral += subtotal;
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+        doc.text(`Subtotal: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 2);
+        y += 8;
+      }
+
+      y = ensureSpace(doc, y, 10);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(BC[0], BC[1], BC[2]);
+      doc.text(`TOTAL GERAL: R$ ${totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y);
+      y += 10;
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // SECTION 7: REGISTRO FOTOGRÁFICO COMENTADO
+  // ══════════════════════════════════════════
+  if (includePhotos) {
+    onProgress?.("Gerando registro fotográfico...");
+    const hasAnyPhoto = sorted.some((r) => (allFotos[r.id] || []).length > 0);
+
+    doc.addPage();
+    const photoSectionTitle = hasAnyPhoto ? "7. REGISTRO FOTOGRÁFICO COMENTADO" : "7. REGISTRO FOTOGRÁFICO";
+    trackSection(photoSectionTitle);
+    y = addSectionTitle(doc, photoSectionTitle, HEADER_H + 4, BC);
+
+    if (!hasAnyPhoto) {
+      y = addBodyText(doc, "Nenhum registro fotográfico foi inserido no período analisado.", y);
+    } else {
+      let figureNum = 1;
+
+      for (const rdo of sorted) {
+        const fotos = allFotos[rdo.id] || [];
+        if (fotos.length === 0) continue;
+
+        y = ensureSpace(doc, y, 20);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(BC[0], BC[1], BC[2]);
+        doc.text(fmtDate(rdo.data), ML, y);
+        y += 8;
+
+        // Process photos 2 per row
+        for (let fi = 0; fi < fotos.length; fi += 2) {
+          const isGrid = fi + 1 < fotos.length;
+          const photosInRow = isGrid ? [fotos[fi], fotos[fi + 1]] : [fotos[fi]];
+
+          for (let pi = 0; pi < photosInRow.length; pi++) {
+            const foto = photosInRow[pi];
+            const imgW = isGrid ? (contentW - 6) / 2 : contentW * 0.6;
+            const imgH = imgW * 0.75;
+            const xOffset = isGrid ? ML + pi * (imgW + 6) : ML + (contentW - imgW) / 2;
+
+            y = ensureSpace(doc, y, imgH + 45);
+
+            onProgress?.(`Carregando foto ${figureNum}...`);
+            const base64 = await loadImageAsBase64(foto.url);
+            if (base64) {
+              try {
+                // Photo border frame
+                doc.setDrawColor(180, 180, 180);
+                doc.setLineWidth(0.3);
+                doc.rect(xOffset - 1, y - 1, imgW + 2, imgH + 2);
+                doc.addImage(base64, "JPEG", xOffset, y, imgW, imgH);
+              } catch { /* skip */ }
+            }
+
+            // If grid, only add caption below after both images are placed
+            if (!isGrid || pi === 0) {
+              // For single image, add caption right after
+            }
+          }
+
+          // Move y past the image row
+          const rowImgW = isGrid ? (contentW - 6) / 2 : contentW * 0.6;
+          const rowImgH = rowImgW * 0.75;
+          y += rowImgH + 4;
+
+          // Captions for each photo in the row
+          for (let pi = 0; pi < photosInRow.length; pi++) {
+            const foto = photosInRow[pi];
+            const captionX = isGrid ? ML + pi * ((contentW - 6) / 2 + 6) : ML;
+            const captionW = isGrid ? (contentW - 6) / 2 : contentW;
+
+            // Figure number
+            doc.setFontSize(8);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+            const figTitle = foto.descricao
+              ? `Figura ${String(figureNum).padStart(2, "0")} – ${foto.descricao.substring(0, 60)}`
+              : `Figura ${String(figureNum).padStart(2, "0")} – ${foto.file_name}`;
+            const figLines = doc.splitTextToSize(figTitle, captionW);
+            doc.text(figLines, captionX, y);
+
+            let captionY = y + figLines.length * 3.5 + 1;
+
+            // Metadata
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+
+            if (foto.data_captura) {
+              doc.text(`Data da captura: ${fmtDateTime(foto.data_captura)}`, captionX, captionY);
+              captionY += 3.5;
+            }
+            if (foto.latitude && foto.longitude) {
+              doc.text(`Local (GPS): ${foto.latitude.toFixed(5)}, ${foto.longitude.toFixed(5)}`, captionX, captionY);
+              captionY += 3.5;
+            }
+            if (foto.fase_obra) {
+              doc.text(`Fase da obra: ${foto.fase_obra}`, captionX, captionY);
+              captionY += 3.5;
+            }
+            if (foto.tag_risco && foto.tag_risco !== "nenhuma") {
+              doc.setTextColor(239, 68, 68);
+              doc.text(`Risco: ${foto.tag_risco.toUpperCase()}`, captionX, captionY);
+              captionY += 3.5;
+              doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+            }
+
+            figureNum++;
+          }
+
+          y += 18; // space after caption block
+        }
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // SECTION 8: INDICADORES TÉCNICOS
+  // ══════════════════════════════════════════
+  onProgress?.("Gerando indicadores técnicos...");
+  doc.addPage();
+  trackSection("8. INDICADORES TÉCNICOS");
+  y = addSectionTitle(doc, "8. INDICADORES TÉCNICOS", HEADER_H + 4, BC);
+
   const totalCost = sorted.reduce((s, r) => s + Number(r.custo_dia || 0), 0);
   const avgTeam = sorted.length > 0 ? Math.round(sorted.reduce((s, r) => s + r.equipe_total, 0) / sorted.length) : 0;
   const avgProd = sorted.length > 0 ? Math.round(sorted.reduce((s, r) => s + Number(r.produtividade_percentual || 0), 0) / sorted.length) : 0;
   const maxPhysical = sorted.length > 0 ? Math.max(...sorted.map((r) => Number(r.percentual_fisico_acumulado || 0))) : 0;
   const totalHours = sorted.reduce((s, r) => s + Number(r.horas_trabalhadas || 0), 0);
   const riskCount: Record<string, number> = {};
-  const climaCount: Record<string, number> = {};
-  const faseCount: Record<string, number> = {};
-  sorted.forEach((r) => {
-    riskCount[r.risco_dia || "baixo"] = (riskCount[r.risco_dia || "baixo"] || 0) + 1;
-    climaCount[r.clima] = (climaCount[r.clima] || 0) + 1;
-    if (r.fase_obra) faseCount[r.fase_obra] = (faseCount[r.fase_obra] || 0) + 1;
-  });
-
-  // ═══════════════════════════════════════
-  // PAGE 2: SUMÁRIO
-  // ═══════════════════════════════════════
-  onProgress?.("Gerando sumário...");
-  doc.addPage();
-  trackSection("Sumário");
-  addSectionHeader(doc, "Sumário", 24, BC);
-
-  const tocPageNum = doc.getNumberOfPages();
-  // TOC content drawn at the end with correct page numbers
-
-  // ═══════════════════════════════════════
-  // SECTION 1: EXECUTIVE SUMMARY & KPIs
-  // ═══════════════════════════════════════
-  onProgress?.("Gerando resumo executivo...");
-  doc.addPage();
-  trackSection("1. Resumo Executivo & KPIs");
-  addSectionHeader(doc, "1. Resumo Executivo & KPIs", 24, BC);
+  sorted.forEach((r) => { riskCount[r.risco_dia || "baixo"] = (riskCount[r.risco_dia || "baixo"] || 0) + 1; });
 
   autoTable(doc, {
-    startY: 38,
+    startY: y,
     head: [["Indicador", "Valor"]],
     body: [
       ["Total de registros RDO", String(sorted.length)],
@@ -364,462 +858,196 @@ export async function generateRdoPDF(
       ["Produtividade média", `${avgProd}%`],
       ["Avanço físico acumulado", `${maxPhysical}%`],
       ...Object.entries(riskCount).map(([r, c]) => [`Dias com risco ${r}`, `${c} dia(s)`]),
-      ...Object.entries(climaCount).map(([w, c]) => [`Clima: ${w}`, `${c} dia(s)`]),
-      ...Object.entries(faseCount).map(([f, c]) => [`Fase: ${f}`, `${c} dia(s)`]),
     ],
     theme: "grid",
     headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-    styles: { fontSize: 9 },
-    margin: { top: HEADER_OFFSET + 4 },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 70 } },
+    margin: { left: ML, right: MR, top: HEADER_H + 4 },
   });
 
-  // Financial Integration Summary in executive section
-  if (includeDespesas) {
-    let totalDespesasPdf = 0;
-    let totalNaoPrevistoPdf = 0;
-    let despesaCountPdf = 0;
-    for (const rdo of sorted) {
-      const desp = await fetchDespesas(rdo.id);
-      const pdfDesp = desp.filter((d: any) => d.incluir_no_pdf);
-      despesaCountPdf += pdfDesp.length;
-      totalDespesasPdf += pdfDesp.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
-      totalNaoPrevistoPdf += pdfDesp.filter((d: any) => !d.previsto_no_orcamento).reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
-    }
-    if (despesaCountPdf > 0) {
-      const yAfterExec = (doc as any).lastAutoTable?.finalY ?? 100;
-      if (yAfterExec < pageH - 60) {
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(BC[0], BC[1], BC[2]);
-        doc.text("Integração Financeira", 14, yAfterExec + 10);
-        autoTable(doc, {
-          startY: yAfterExec + 14,
-          head: [["Indicador", "Valor"]],
-          body: [
-            ["Lançamentos automáticos gerados", String(despesaCountPdf)],
-            ["Total integrado ao financeiro", `R$ ${totalDespesasPdf.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`],
-            ["Despesas não previstas", `R$ ${totalNaoPrevistoPdf.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`],
-          ],
-          theme: "grid",
-          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-          styles: { fontSize: 9 },
-          margin: { top: HEADER_OFFSET + 4 },
-        });
-      }
-    }
-  }
+  y = (doc as any).lastAutoTable?.finalY + 10 || y + 60;
 
-  // ═══════════════════════════════════════
-  // SECTION 2: CHARTS
-  // ═══════════════════════════════════════
-  onProgress?.("Gerando gráficos...");
-  doc.addPage();
-  trackSection("2. Gráficos de Desempenho");
-  addSectionHeader(doc, "2. Gráficos de Desempenho", 24, BC);
-
-  // Productivity gauge
-  drawGauge(doc, 40, 60, 18, avgProd, "Produtividade Média", BC);
-
-  // Physical progress gauge
-  drawGauge(doc, 100, 60, 18, maxPhysical, "Avanço Físico", BC);
-
-  // Risk distribution gauge (% of high risk days)
+  // Gauges
+  y = ensureSpace(doc, y, 60);
+  drawGauge(doc, ML + 25, y + 20, 18, avgProd, "Produtividade Média", BC);
+  drawGauge(doc, pageW / 2, y + 20, 18, maxPhysical, "Avanço Físico", BC);
   const highRiskPct = sorted.length > 0 ? Math.round(((riskCount["alto"] || 0) / sorted.length) * 100) : 0;
-  drawGauge(doc, 160, 60, 18, highRiskPct, "Risco Alto (%)", BC);
+  drawGauge(doc, pageW - MR - 25, y + 20, 18, highRiskPct, "Risco Alto (%)", BC);
+  y += 55;
 
-  // Productivity per day bar chart (last 10 days)
+  // Bar charts
   const last10 = sorted.slice(-10);
   if (last10.length > 0) {
-    drawBarChart(doc, 14, 100, pageW - 28, 55, last10.map((r) => ({
+    doc.addPage();
+    y = HEADER_H + 4;
+    drawBarChart(doc, ML, y + 10, contentW, 55, last10.map((r) => ({
       label: fmtDateShort(r.data).substring(0, 5),
       value: Number(r.produtividade_percentual || 0),
-      color: Number(r.produtividade_percentual || 0) >= 70 ? [34, 197, 94] : Number(r.produtividade_percentual || 0) >= 50 ? [234, 179, 8] : [239, 68, 68],
+      color: Number(r.produtividade_percentual || 0) >= 70 ? [34, 197, 94] as [number, number, number] : Number(r.produtividade_percentual || 0) >= 50 ? [234, 179, 8] as [number, number, number] : [239, 68, 68] as [number, number, number],
     })), "Produtividade por Dia (últimos 10 registros)", "%", BC);
-  }
 
-  // Cost per day bar chart
-  if (last10.length > 0) {
-    drawBarChart(doc, 14, 175, pageW - 28, 55, last10.map((r) => ({
+    drawBarChart(doc, ML, y + 85, contentW, 55, last10.map((r) => ({
       label: fmtDateShort(r.data).substring(0, 5),
       value: Number(r.custo_dia || 0),
-      color: [BC[0], BC[1], BC[2]] as [number, number, number],
+      color: BC,
     })), "Custo Diário (R$) — últimos 10 registros", "", BC);
   }
 
-  // ═══════════════════════════════════════
-  // SECTION: PERFORMANCE BY PHASE
-  // ═══════════════════════════════════════
-  const fasePerformance = new Map<string, { qtd: number; custo: number; unidade: string }>();
-  sorted.forEach((r) => {
-    const fase = r.fase_obra || "Sem fase";
-    if (!fasePerformance.has(fase)) fasePerformance.set(fase, { qtd: 0, custo: 0, unidade: (r as any).unidade_medicao || "m²" });
-    const entry = fasePerformance.get(fase)!;
-    entry.qtd += Number((r as any).quantidade_executada || 0);
-    entry.custo += Number(r.custo_dia || 0);
-  });
-
-  if (fasePerformance.size > 0) {
-    onProgress?.("Gerando indicadores de performance...");
-    doc.addPage();
-    trackSection("3. Indicadores de Performance por Fase");
-    addSectionHeader(doc, "3. Indicadores de Performance por Fase", 24, BC);
-
-    const perfBody = Array.from(fasePerformance.entries()).map(([fase, data]) => {
-      const custoPorUnidade = data.qtd > 0 ? data.custo / data.qtd : 0;
-      return [
-        fase,
-        `${data.qtd.toLocaleString("pt-BR")} ${data.unidade}`,
-        `R$ ${data.custo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-        data.qtd > 0 ? `R$ ${custoPorUnidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/${data.unidade}` : "N/A",
-      ];
-    });
-
-    autoTable(doc, {
-      startY: 38,
-      head: [["Fase", "Qtd. Executada", "Custo Acumulado", "Custo por Unidade"]],
-      body: perfBody,
-      theme: "grid",
-      headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-      styles: { fontSize: 9 },
-      margin: { top: HEADER_OFFSET + 4 },
-    });
-  }
-
-  // ═══════════════════════════════════════
-  // SECTION: PREDICTIVE ANALYSIS
-  // ═══════════════════════════════════════
-  let nextSection = fasePerformance.size > 0 ? 4 : 3;
-
-  // Build projection data from phase performance
-  const projectionRows: string[][] = [];
-  fasePerformance.forEach((data, fase) => {
-    if (data.qtd > 0) {
-      const custoPorUnidade = data.custo / data.qtd;
-      // Rough projection: if we had a planned total, project
-      const projectedTotal = custoPorUnidade * data.qtd * 2; // simplified
-      projectionRows.push([
-        fase,
-        `R$ ${data.custo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-        `R$ ${custoPorUnidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/${data.unidade}`,
-        `${data.qtd.toLocaleString("pt-BR")} ${data.unidade}`,
-      ]);
-    }
-  });
-
-  if (projectionRows.length > 0) {
-    onProgress?.("Gerando análise preditiva...");
-    doc.addPage();
-    trackSection(`${nextSection}. Análise Preditiva de Estouro`);
-    addSectionHeader(doc, `${nextSection}. Análise Preditiva de Estouro`, 24, BC);
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text("Projeção baseada em regressão linear simples sobre o custo por unidade executada.", 14, 36);
-
-    autoTable(doc, {
-      startY: 42,
-      head: [["Fase", "Custo Real", "Custo/Unidade", "Qtd. Executada"]],
-      body: projectionRows,
-      theme: "grid",
-      headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-      styles: { fontSize: 9 },
-      margin: { top: HEADER_OFFSET + 4 },
-    });
-    nextSection++;
-  }
-
-  // ═══════════════════════════════════════
-  // SECTION: AI SUMMARY (optional)
-  // ═══════════════════════════════════════
-  let sectionNum = nextSection;
-  if (aiSummary) {
-    onProgress?.("Adicionando análise IA...");
-    doc.addPage();
-    trackSection(`${sectionNum}. Análise Inteligente (IA)`);
-    addSectionHeader(doc, `${sectionNum}. Análise Inteligente (IA)`, 24, BC);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(40, 40, 40);
-    const lines = doc.splitTextToSize(aiSummary, pageW - 32);
-    doc.text(lines, 16, 40);
-    sectionNum++;
-  }
-
-  // ═══════════════════════════════════════
-  // SECTION: CHRONOLOGICAL ENTRIES
-  // ═══════════════════════════════════════
-  onProgress?.("Gerando registros cronológicos...");
+  // ══════════════════════════════════════════
+  // SECTION 9: ANÁLISE TÉCNICA
+  // ══════════════════════════════════════════
+  onProgress?.("Gerando análise técnica...");
   doc.addPage();
-  trackSection(`${sectionNum}. Registros Cronológicos Detalhados`);
-  addSectionHeader(doc, `${sectionNum}. Registros Cronológicos Detalhados`, 24, BC);
+  trackSection("9. ANÁLISE TÉCNICA");
+  y = addSectionTitle(doc, "9. ANÁLISE TÉCNICA", HEADER_H + 4, BC);
 
-  // Summary table
-  autoTable(doc, {
-    startY: 38,
-    head: [["Data", "Clima", "Equipe", "Prod. %", "Custo R$", "Avanço %", "Risco"]],
-    body: sorted.map((r) => [
-      fmtDateShort(r.data),
-      r.clima,
-      String(r.equipe_total),
-      `${r.produtividade_percentual}%`,
-      Number(r.custo_dia || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
-      `${r.percentual_fisico_acumulado}%`,
-      r.risco_dia || "baixo",
-    ]),
-    theme: "grid",
-    headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-    styles: { fontSize: 7, cellPadding: 2 },
-    margin: { top: HEADER_OFFSET + 4 },
-  });
+  // Auto-generated technical analysis
+  const hasHighRisk = (riskCount["alto"] || 0) > 0;
+  const hasMedRisk = (riskCount["medio"] || 0) > 0;
+  const allOcorrenciasList = sorted.flatMap((r) => allOcorrencias[r.id] || []);
+  const hasContractualRisk = allOcorrenciasList.some((o: any) => o.gera_risco_contratual);
 
-  // Detailed entries
-  const chronSectionIdx = bookmarks.length - 1; // index of "Registros Cronológicos" bookmark
-  for (let idx = 0; idx < sorted.length; idx++) {
-    const rdo = sorted[idx];
-    onProgress?.(`Processando RDO ${idx + 1}/${sorted.length}...`);
-    doc.addPage();
-    // Track sub-bookmark for this day
-    if (!bookmarks[chronSectionIdx].children) bookmarks[chronSectionIdx].children = [];
-    bookmarks[chronSectionIdx].children!.push({ title: fmtDateShort(rdo.data), page: doc.getNumberOfPages() });
+  let analysisText = `As atividades executadas durante o período de ${period} encontram-se ` +
+    `registradas de forma detalhada nos itens anteriores deste relatório. `;
 
-    doc.setFontSize(13);
+  if (avgProd >= 70) {
+    analysisText += `A produtividade média de ${avgProd}% indica desempenho satisfatório da equipe executora. `;
+  } else if (avgProd >= 50) {
+    analysisText += `A produtividade média de ${avgProd}% indica desempenho moderado, sendo recomendável atenção para eventuais melhorias no processo executivo. `;
+  } else {
+    analysisText += `A produtividade média de ${avgProd}% indica desempenho abaixo do esperado, requerendo análise das causas e implementação de ações corretivas. `;
+  }
+
+  if (hasHighRisk) {
+    analysisText += `Foram identificados ${riskCount["alto"]} dia(s) com classificação de risco alto, demandando atenção imediata da gestão técnica. `;
+  }
+  if (hasContractualRisk) {
+    analysisText += `ATENÇÃO: Foram identificadas ocorrências com potencial risco contratual, conforme detalhado na seção de ocorrências. `;
+  }
+
+  y = addBodyText(doc, analysisText, y);
+
+  // AI summary if available
+  if (aiSummary) {
+    y = ensureSpace(doc, y + 4, 20);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(BC[0], BC[1], BC[2]);
-    doc.text(fmtDate(rdo.data), 14, HEADER_OFFSET + 6);
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-    const metaLine = [
-      `Clima: ${rdo.clima}`,
-      `Equipe: ${rdo.equipe_total}`,
-      `Prod: ${rdo.produtividade_percentual}%`,
-      `Custo: R$ ${Number(rdo.custo_dia || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-      `Risco: ${rdo.risco_dia || "baixo"}`,
-      rdo.fase_obra ? `Fase: ${rdo.fase_obra}` : null,
-      rdo.is_locked ? "🔒" : null,
-    ].filter(Boolean).join("  |  ");
-    doc.text(metaLine, 14, HEADER_OFFSET + 12);
-
-    let y = HEADER_OFFSET + 20;
-
-    if (rdo.observacoes_gerais) {
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "italic");
-      doc.setTextColor(80, 80, 80);
-      const obsLines = doc.splitTextToSize(rdo.observacoes_gerais, pageW - 28);
-      doc.text(obsLines, 14, y);
-      y += obsLines.length * 4.5 + 4;
-    }
-
-    // Activities
-    if (includeActivities) {
-      const atividades = await fetchAtividades(rdo.id);
-      if (atividades.length > 0) {
-        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(40, 40, 40);
-        doc.text("Atividades", 14, y);
-        y += 2;
-        autoTable(doc, {
-          startY: y,
-          margin: { top: HEADER_OFFSET + 4 },
-          head: [["Descrição", "Tipo", "Impacto", "Concluída"]],
-          body: atividades.map((a: any) => [
-            a.descricao.substring(0, 80),
-            a.tipo_atividade,
-            a.impacto_cronograma || "nenhum",
-            a.concluida ? "Sim" : "Não",
-          ]),
-          theme: "grid",
-          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-          styles: { fontSize: 7, cellPadding: 1.5 },
-        });
-        y = (doc as any).lastAutoTable?.finalY + 6 || y + 20;
-      }
-    }
-
-    // Materials
-    if (includeMaterials) {
-      const materiais = await fetchMateriais(rdo.id);
-      if (materiais.length > 0) {
-        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(40, 40, 40);
-        doc.text("Materiais & Custos", 14, y);
-        y += 2;
-        autoTable(doc, {
-          startY: y,
-          margin: { top: HEADER_OFFSET + 4 },
-          head: [["Item", "Tipo", "Qtd", "Unidade", "V. Unit.", "V. Total", "Orçamento"]],
-          body: materiais.map((m: any) => [
-            m.item.substring(0, 40),
-            m.tipo,
-            String(m.quantidade || 0),
-            m.unidade || "un",
-            `R$ ${Number(m.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-            `R$ ${Number(m.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-            m.previsto_em_orcamento ? "Sim" : "Não",
-          ]),
-          theme: "grid",
-          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-          styles: { fontSize: 7, cellPadding: 1.5 },
-        });
-        y = (doc as any).lastAutoTable?.finalY + 6 || y + 20;
-      }
-    }
-
-    // Occurrences
-    if (includeOccurrences) {
-      const ocorrencias = await fetchOcorrencias(rdo.id);
-      if (ocorrencias.length > 0) {
-        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(40, 40, 40);
-        doc.text("Ocorrências", 14, y);
-        y += 2;
-        autoTable(doc, {
-          startY: y,
-          margin: { top: HEADER_OFFSET + 4 },
-          head: [["Descrição", "Tipo", "Impacto", "Responsável", "Risco Contratual"]],
-          body: ocorrencias.map((o: any) => [
-            o.descricao.substring(0, 60),
-            o.tipo_ocorrencia,
-            o.impacto || "baixo",
-            o.responsavel || "—",
-            o.gera_risco_contratual ? "⚠️ Sim" : "Não",
-          ]),
-          theme: "grid",
-          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-          styles: { fontSize: 7, cellPadding: 1.5 },
-        });
-        y = (doc as any).lastAutoTable?.finalY + 6 || y + 20;
-      }
-    }
-
-    // Despesas
-    if (includeDespesas) {
-      const despesas = await fetchDespesas(rdo.id);
-      const despesasPdf = despesas.filter((d: any) => d.incluir_no_pdf);
-      if (despesasPdf.length > 0) {
-        if (y > pageH - 40) { doc.addPage(); y = HEADER_OFFSET + 4; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(40, 40, 40);
-        doc.text("💰 Despesas do Dia", 14, y);
-        y += 2;
-        const tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mão de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
-        autoTable(doc, {
-          startY: y,
-          margin: { top: HEADER_OFFSET + 4 },
-          head: [["Descrição", "Tipo", "Qtd", "Unid.", "V. Unit.", "V. Total"]],
-          body: despesasPdf.map((d: any) => [
-            d.descricao.substring(0, 50),
-            tipoLabels[d.tipo] || d.tipo,
-            String(d.quantidade || 0),
-            d.unidade || "un",
-            `R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-            `R$ ${Number(d.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-          ]),
-          theme: "grid",
-          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-          styles: { fontSize: 7, cellPadding: 1.5 },
-        });
-        y = (doc as any).lastAutoTable?.finalY + 2 || y + 20;
-        const subtotal = despesasPdf.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(40, 40, 40);
-        doc.text(`Subtotal: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 14, y + 3);
-        y += 10;
-      }
-    }
-  }
-  sectionNum++;
-
-  // ═══════════════════════════════════════
-  // SECTION: PHOTOS
-  // ═══════════════════════════════════════
-  if (includePhotos) {
-    onProgress?.("Carregando fotos...");
-    doc.addPage();
-    trackSection(`${sectionNum}. Registro Fotográfico`);
-    addSectionHeader(doc, `${sectionNum}. Registro Fotográfico`, 24, BC);
-
-    let photoY = 38;
-    let hasPhotos = false;
-
-    for (const rdo of sorted) {
-      const fotos = await fetchFotos(rdo.id);
-      if (fotos.length === 0) continue;
-      hasPhotos = true;
-
-      if (photoY > pageH - 60) { doc.addPage(); photoY = HEADER_OFFSET + 4; }
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(BC[0], BC[1], BC[2]);
-      doc.text(fmtDate(rdo.data), 14, photoY);
-      photoY += 6;
-
-      for (const foto of fotos) {
-        if (photoY > pageH - 80) { doc.addPage(); photoY = HEADER_OFFSET + 4; }
-        const base64 = await loadImageAsBase64(foto.url);
-        if (base64) {
-          try {
-            const imgW = 80, imgH = 60;
-            doc.addImage(base64, "JPEG", 14, photoY, imgW, imgH);
-            const captionX = 100;
-            doc.setFontSize(8);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(40, 40, 40);
-            doc.text(foto.file_name, captionX, photoY + 6);
-
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-            let cY = photoY + 12;
-            if (foto.descricao) {
-              const dl = doc.splitTextToSize(foto.descricao, pageW - captionX - 14);
-              doc.text(dl, captionX, cY);
-              cY += dl.length * 4 + 2;
-            }
-            if (foto.fase_obra) { doc.text(`Fase: ${foto.fase_obra}`, captionX, cY); cY += 5; }
-            if (foto.tag_risco && foto.tag_risco !== "nenhuma") { doc.text(`Risco: ${foto.tag_risco}`, captionX, cY); cY += 5; }
-            if (foto.data_captura) {
-              doc.text(`Captura: ${format(new Date(foto.data_captura), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, captionX, cY); cY += 5;
-            }
-            if (foto.latitude && foto.longitude) {
-              doc.text(`GPS: ${foto.latitude.toFixed(5)}, ${foto.longitude.toFixed(5)}`, captionX, cY);
-            }
-            photoY += imgH + 8;
-          } catch { /* skip */ }
-        }
-      }
-    }
-
-    if (!hasPhotos) {
-      doc.setFontSize(9);
-      doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-      doc.text("Nenhuma foto registrada no período.", 14, photoY);
-    }
-    sectionNum++;
+    doc.text("Análise Inteligente (IA)", ML, y);
+    y += 5;
+    y = addBodyText(doc, aiSummary, y);
   }
 
-  // ═══════════════════════════════════════
-  // LAST PAGE: VERIFICATION
-  // ═══════════════════════════════════════
-  onProgress?.("Finalizando documento...");
+  // ══════════════════════════════════════════
+  // SECTION 10: CONCLUSÃO TÉCNICA
+  // ══════════════════════════════════════════
   doc.addPage();
-  trackSection(`${sectionNum}. Informações de Verificação`);
-  addSectionHeader(doc, `${sectionNum}. Informações de Verificação`, 24, BC);
+  trackSection("10. CONCLUSÃO TÉCNICA");
+  y = addSectionTitle(doc, "10. CONCLUSÃO TÉCNICA", HEADER_H + 4, BC);
+
+  const fases = [...new Set(sorted.map((r) => r.fase_obra).filter(Boolean))];
+  const faseText = fases.length > 0 ? fases.join(", ") : "etapa atual";
+
+  y = addBodyText(doc,
+    `Com base nas observações realizadas durante o período analisado (${period}), ` +
+    `conclui-se que as atividades registradas correspondem à(s) etapa(s) de ${faseText} ` +
+    `prevista(s) para a fase atual da obra. ` +
+    `O avanço físico acumulado atingiu ${maxPhysical}%, com custo total de R$ ${totalCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. ` +
+    `A equipe média foi de ${avgTeam} pessoa(s) com ${totalHours} horas totais trabalhadas no período.`,
+    y
+  );
+
+  if (hasHighRisk || hasMedRisk) {
+    y += 4;
+    y = addBodyText(doc,
+      "Ressalta-se que durante o período foram registrados dias com classificação de risco " +
+      (hasHighRisk ? "alto" : "médio") + ", conforme detalhado na seção de indicadores técnicos, " +
+      "requerendo monitoramento contínuo pela equipe de gestão.",
+      y
+    );
+  }
+
+  // ══════════════════════════════════════════
+  // SECTION 11: RECOMENDAÇÕES
+  // ══════════════════════════════════════════
+  y = ensureSpace(doc, y + 8, 40);
+  if (y <= HEADER_H + 10) {
+    trackSection("11. RECOMENDAÇÕES");
+  }
+  y = addSectionTitle(doc, "11. RECOMENDAÇÕES", y, BC);
+
+  const recommendations: string[] = [];
+  if (avgProd < 70) {
+    recommendations.push("Avaliar causas da produtividade abaixo da meta e implementar ações corretivas para melhoria do desempenho executivo.");
+  }
+  if (hasHighRisk) {
+    recommendations.push("Intensificar o monitoramento de segurança nos dias com classificação de risco alto, garantindo a implementação de medidas preventivas.");
+  }
+  if (hasContractualRisk) {
+    recommendations.push("Documentar e formalizar as ocorrências com risco contratual junto à contratante para fins de resguardo técnico e jurídico.");
+  }
+  if (allOcorrenciasList.length > 0) {
+    recommendations.push("Manter o registro sistemático de ocorrências para garantir rastreabilidade e possibilitar análises futuras de tendências.");
+  }
+  if (recommendations.length === 0) {
+    recommendations.push("Manter o ritmo de execução observado e a qualidade dos registros técnicos diários.");
+    recommendations.push("Continuar o acompanhamento fotográfico detalhado para fins de documentação e auditoria.");
+  }
+
+  for (const rec of recommendations) {
+    y = ensureSpace(doc, y, 8);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+    const lines = doc.splitTextToSize(`• ${rec}`, contentW - 5);
+    doc.text(lines, ML + 3, y);
+    y += lines.length * 4.2 + 2;
+  }
+
+  // ══════════════════════════════════════════
+  // SECTION 12: ASSINATURA TÉCNICA
+  // ══════════════════════════════════════════
+  doc.addPage();
+  trackSection("12. ASSINATURA TÉCNICA");
+  y = addSectionTitle(doc, "12. ASSINATURA TÉCNICA", HEADER_H + 4, BC);
+
+  y += 30;
+
+  // Signature line centered
+  const sigX = pageW / 2;
+  doc.setDrawColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+  doc.setLineWidth(0.4);
+  doc.line(sigX - 50, y, sigX + 50, y);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+  doc.text("Responsável Técnico", sigX, y + 6, { align: "center" });
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(40, 40, 40);
-  [
+  if (technicalResponsible) {
+    doc.text(technicalResponsible, sigX, y + 12, { align: "center" });
+  }
+  doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+  doc.text("CREA / CAU: _______________", sigX, y + 18, { align: "center" });
+
+  y += 40;
+
+  // Date and location
+  doc.setFontSize(9);
+  doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+  doc.text(`Data: ${format(now, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`, sigX, y, { align: "center" });
+
+  // ══════════════════════════════════════════
+  // SECTION 13: VERIFICAÇÃO & QR CODE
+  // ══════════════════════════════════════════
+  doc.addPage();
+  trackSection("13. INFORMAÇÕES DE VERIFICAÇÃO");
+  y = addSectionTitle(doc, "13. INFORMAÇÕES DE VERIFICAÇÃO", HEADER_H + 4, BC);
+
+  const verifyInfo = [
     `Nº do Relatório: ${reportId}`,
     `Hash SHA-256: ${integrityHash}`,
     `Hash Resumido: ${shortHash}`,
@@ -827,35 +1055,39 @@ export async function generateRdoPDF(
     `Gerado por: ${userName || "Sistema"}`,
     `Obra: ${projectName}`,
     `Total de Registros RDO: ${sorted.length}`,
-  ].forEach((line, i) => doc.text(line, 14, 40 + i * 7));
+  ];
 
-  doc.addImage(qrDataUrl, "PNG", 14, 96, 40, 40);
-  doc.setFontSize(7);
-  doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório.", 14, 142);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+  verifyInfo.forEach((line, i) => doc.text(line, ML, y + i * 7));
 
-  // ═══════════════════════════════════════
+  y += verifyInfo.length * 7 + 10;
+  doc.addImage(qrDataUrl, "PNG", ML, y, 40, 40);
+  doc.setFontSize(8);
+  doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório.", ML, y + 46);
+
+  // ══════════════════════════════════════════
   // DRAW TOC WITH PAGE NUMBERS
-  // ═══════════════════════════════════════
-  const tocEntries = bookmarks.filter((b) => b.title !== "Sumário");
+  // ══════════════════════════════════════════
+  onProgress?.("Finalizando sumário...");
+  const tocEntries = bookmarks.filter((b) => b.title !== "SUMÁRIO");
   doc.setPage(tocPageNum);
-  let tocY = 40;
-  const tocLeftMain = 20;
-  const tocLeftSub = 30;
-  const tocRight = pageW - 20;
+  let tocY = addSectionTitle(doc, "SUMÁRIO", HEADER_H + 4, BC);
 
   for (const entry of tocEntries) {
-    if (tocY > pageH - 20) { doc.addPage(); tocY = HEADER_OFFSET + 10; }
+    if (tocY > pageH - MB - 10) break;
 
-    // Main entry
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(40, 40, 40);
-    doc.text(entry.title, tocLeftMain, tocY);
+    doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+    doc.text(entry.title, ML, tocY);
     const titleW = doc.getTextWidth(entry.title);
     const pageNumStr = String(entry.page);
     const pageNumW = doc.getTextWidth(pageNumStr);
-    const dotsStart = tocLeftMain + titleW + 2;
+    const tocRight = pageW - MR;
+    const dotsStart = ML + titleW + 2;
     const dotsEnd = tocRight - pageNumW - 2;
     if (dotsEnd > dotsStart) {
       doc.setTextColor(180, 180, 180);
@@ -864,21 +1096,19 @@ export async function generateRdoPDF(
     }
     doc.setTextColor(BC[0], BC[1], BC[2]);
     doc.text(pageNumStr, tocRight, tocY, { align: "right" });
-    tocY += 8;
+    tocY += 7;
 
-    // Sub-entries (children) with visual indent
     if (entry.children && entry.children.length > 0) {
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
       for (const child of entry.children) {
-        if (tocY > pageH - 15) { doc.addPage(); tocY = HEADER_OFFSET + 10; }
-        doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-        const childLabel = `– ${child.title}`;
-        doc.text(childLabel, tocLeftSub, tocY);
+        if (tocY > pageH - MB - 10) break;
+        doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+        const childLabel = `  – ${child.title}`;
+        doc.text(childLabel, ML + 8, tocY);
         const cTitleW = doc.getTextWidth(childLabel);
         const cPageStr = String(child.page);
         const cPageW = doc.getTextWidth(cPageStr);
-        const cDotsStart = tocLeftSub + cTitleW + 2;
+        const cDotsStart = ML + 8 + cTitleW + 2;
         const cDotsEnd = tocRight - cPageW - 2;
         if (cDotsEnd > cDotsStart) {
           doc.setTextColor(200, 200, 200);
@@ -887,15 +1117,15 @@ export async function generateRdoPDF(
         }
         doc.setTextColor(BC[0], BC[1], BC[2]);
         doc.text(cPageStr, tocRight, tocY, { align: "right" });
-        tocY += 6;
+        tocY += 5;
       }
-      tocY += 2; // extra spacing after children
+      tocY += 2;
     }
   }
 
-  // ═══════════════════════════════════════
-  // PDF OUTLINE (Bookmarks for navigation)
-  // ═══════════════════════════════════════
+  // ══════════════════════════════════════════
+  // PDF OUTLINE (Bookmarks)
+  // ══════════════════════════════════════════
   const outline = (doc as any).outline;
   if (outline && typeof outline.add === "function") {
     bookmarks.forEach((b) => {
@@ -908,48 +1138,28 @@ export async function generateRdoPDF(
     });
   }
 
-  // ═══════════════════════════════════════
-  // HEADERS & FOOTERS
-  // ═══════════════════════════════════════
+  // ══════════════════════════════════════════
+  // HEADERS, FOOTERS & WATERMARK
+  // ══════════════════════════════════════════
+  onProgress?.("Finalizando documento...");
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    if (i > 1) {
-      doc.setFillColor(BC[0], BC[1], BC[2]);
-      doc.rect(0, 0, pageW, 2, "F");
-      let hx = 14;
-      if (logoBase64) {
-        try { doc.addImage(logoBase64, "PNG", hx, 5, 14, 7); hx += 17; } catch {}
-      }
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(BC[0], BC[1], BC[2]);
-      if (companyName) { doc.text(companyName, hx, 9); }
-      doc.setFontSize(6);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-      const hd = [companyAddress, companyPhone ? `Tel: ${companyPhone}` : null, technicalResponsible ? `Resp: ${technicalResponsible}` : null].filter(Boolean).join("  |  ");
-      if (hd) doc.text(hd, 14, 13);
-      doc.setDrawColor(220, 220, 220);
-      doc.setLineWidth(0.3);
-      doc.line(14, 16, pageW - 14, 16);
+
+    // Watermark on all pages except cover
+    if (i > 1 && companyName) {
+      addWatermark(doc, companyName);
     }
-    doc.setFontSize(7);
-    doc.setTextColor(160, 160, 160);
-    doc.text(`${reportId}  |  Hash: ${shortHash}`, 14, pageH - 6);
-    doc.text(`Página ${i} de ${totalPages}`, pageW - 14, pageH - 6, { align: "right" });
+
+    // Header on all pages except cover
+    if (i > 1) {
+      addInstitutionalHeader(doc, projectName, companyName, technicalResponsible, logoBase64, BC);
+    }
+
+    // Footer on all pages
+    addInstitutionalFooter(doc, i, totalPages, reportId, shortHash, companyName, generatedAt);
   }
 
-  const fileName = `RDO2-${projectName.replace(/\s+/g, "-").toLowerCase()}-${format(now, "yyyy-MM-dd")}.pdf`;
+  const fileName = `Laudo-Tecnico-${projectName.replace(/\s+/g, "-").toLowerCase()}-${format(now, "yyyy-MM-dd")}.pdf`;
   doc.save(fileName);
-}
-
-function addSectionHeader(doc: jsPDF, title: string, y = 24, color: readonly [number, number, number] = BLUE) {
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(color[0], color[1], color[2]);
-  doc.text(title, 14, y);
-  doc.setDrawColor(color[0], color[1], color[2]);
-  doc.setLineWidth(0.4);
-  doc.line(14, y + 3, 100, y + 3);
 }
