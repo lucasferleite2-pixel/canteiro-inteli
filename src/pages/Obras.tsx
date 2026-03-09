@@ -74,7 +74,7 @@ export default function Obras() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setOpen(false);
-      setForm({ name: "", description: "", address: "", budget: "", start_date: "", expected_end_date: "", status: "planning" });
+      setForm({ name: "", description: "", address: "", municipality: "", budget: "", start_date: "", expected_end_date: "", status: "planning" });
       toast({ title: "Obra criada com sucesso!" });
     },
     onError: (err: any) => toast({ variant: "destructive", title: "Erro", description: err.message }),
