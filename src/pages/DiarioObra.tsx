@@ -364,7 +364,7 @@ export default function DiarioObra() {
         open={showNcReport}
         onOpenChange={setShowNcReport}
         projectName={resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra"}
-        municipality || (resolvedProjects.find((p) => p.id === selectedProject) as any)?.projectAddress={(resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || ""}
+        projectAddress={(resolvedProjects.find((p) => p.id === selectedProject) as any)?.municipality || (resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || ""}
       />
 
       {/* AI Panel */}
