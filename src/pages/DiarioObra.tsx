@@ -41,7 +41,7 @@ export default function DiarioObra() {
     queryKey: ["projects", companyId],
     queryFn: async () => {
       if (!companyId) return [];
-      const { data, error } = await supabase.from("projects").select("id, name, status, address").eq("company_id", companyId).order("name");
+      const { data, error } = await supabase.from("projects").select("id, name, status, address, municipality").eq("company_id", companyId).order("name");
       if (error) throw error;
       return data;
     },
