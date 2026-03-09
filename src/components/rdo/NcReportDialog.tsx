@@ -53,12 +53,13 @@ function createEmptyItem(): NcItem {
   };
 }
 
-export function NcReportDialog({ open, onOpenChange, projectName }: Props) {
+export function NcReportDialog({ open, onOpenChange, projectName, projectAddress }: Props) {
   const { companyId, user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState("");
   const [items, setItems] = useState<NcItem[]>([createEmptyItem()]);
+  const [municipality, setMunicipality] = useState("");
   const [additionalNorms, setAdditionalNorms] = useState("");
   const [conclusions, setConclusions] = useState("");
 
