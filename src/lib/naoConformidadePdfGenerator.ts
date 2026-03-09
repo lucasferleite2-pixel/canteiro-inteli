@@ -307,7 +307,7 @@ export async function generateNaoConformidadePDF(
   // Info box
   const infoStartY = 100;
   doc.setFillColor(WARN_BG[0], WARN_BG[1], WARN_BG[2]);
-  doc.roundedRect(30, infoStartY, pageW - 60, 78, 2, 2, "F");
+  doc.roundedRect(30, infoStartY, pageW - 60, 86, 2, 2, "F");
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
