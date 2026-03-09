@@ -475,6 +475,7 @@ export async function generateRdoPDF(
     head: [["Item", "Informação"]],
     body: [
       ["Obra", projectName],
+      ["Município / UF", options.municipality || "—"],
       ["Empresa Executora", companyName || "—"],
       ["Endereço", companyAddress || "—"],
       ["Telefone", companyPhone || "—"],
