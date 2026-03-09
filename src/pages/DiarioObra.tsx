@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ClipboardList, Loader2, Sparkles, FileDown } from "lucide-react";
+import { Plus, ClipboardList, Loader2, Sparkles, FileDown, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_OBRAS, DEMO_RDO_ENTRIES, DEMO_DESPESAS } from "@/lib/demoData";
@@ -21,6 +21,7 @@ import { RdoFilters, RdoFilterValues, defaultFilters } from "@/components/rdo/Rd
 import { RdoNewDayDialog } from "@/components/rdo/RdoNewDayDialog";
 import { RdoDashboard } from "@/components/rdo/RdoDashboard";
 import { DemoBanner } from "@/components/DemoBanner";
+import { NcReportDialog } from "@/components/rdo/NcReportDialog";
 
 export default function DiarioObra() {
   const { companyId, user, isDemo } = useAuth();
@@ -31,6 +32,7 @@ export default function DiarioObra() {
   const [editingRdo, setEditingRdo] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showPdfFilter, setShowPdfFilter] = useState(false);
+  const [showNcReport, setShowNcReport] = useState(false);
   const [filters, setFilters] = useState<RdoFilterValues>(defaultFilters);
   const ai = useAIAnalysis();
 
@@ -302,6 +304,10 @@ export default function DiarioObra() {
                 {ai.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 Resumo IA
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowNcReport(true)} className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                Laudo NC
+              </Button>
             </>
           )}
           <Button onClick={() => setShowNewRdo(true)} disabled={!selectedProject}>
@@ -350,6 +356,13 @@ export default function DiarioObra() {
         onGenerate={exportPDF}
         isLoading={pdfLoading}
         progress={pdfProgress}
+      />
+
+      {/* NC Report Dialog */}
+      <NcReportDialog
+        open={showNcReport}
+        onOpenChange={setShowNcReport}
+        projectName={resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra"}
       />
 
       {/* AI Panel */}
