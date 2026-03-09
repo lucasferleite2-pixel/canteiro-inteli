@@ -244,7 +244,7 @@ export async function generateNaoConformidadePDF(
   onProgress?: (step: string) => void
 ): Promise<void> {
   const {
-    projectName, companyName, companyAddress, companyPhone,
+    projectName, municipality, companyName, companyAddress, companyPhone,
     technicalResponsible, creaCau, userName, logoBase64, brandColor,
     items, additionalNorms, conclusions,
   } = options;
