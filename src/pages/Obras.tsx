@@ -31,6 +31,7 @@ export default function Obras() {
     name: "",
     description: "",
     address: "",
+    municipality: "",
     budget: "",
     start_date: "",
     expected_end_date: "",
