@@ -389,6 +389,7 @@ export async function generateNaoConformidadePDF(
     head: [["Item", "Informação"]],
     body: [
       ["Obra", projectName],
+      ["Município / UF", municipality || "—"],
       ["Empresa", companyName || "—"],
       ["Endereço", companyAddress || "—"],
       ["Telefone", companyPhone || "—"],
