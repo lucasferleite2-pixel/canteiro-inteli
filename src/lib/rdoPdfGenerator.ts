@@ -6,20 +6,20 @@ import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
 
 // ── Design Constants (Institutional) ──
-const BLUE_TECH: [number, number, number] = [15, 47, 87];    // #0f2f57
-const GRAY_LIGHT: [number, number, number] = [232, 237, 244]; // #e8edf4
-const ACCENT: [number, number, number] = [44, 123, 229];      // #2c7be5
+const BLUE_TECH: [number, number, number] = [15, 47, 87];
+const GRAY_LIGHT: [number, number, number] = [232, 237, 244];
+const ACCENT: [number, number, number] = [44, 123, 229];
 const GRAY_TEXT: [number, number, number] = [107, 114, 128];
 const DARK_TEXT: [number, number, number] = [30, 30, 30];
 const WARN_BG: [number, number, number] = [255, 251, 235];
 const WARN_BORDER: [number, number, number] = [234, 179, 8];
 
-// Margins: top 30mm, bottom 25mm, left 20mm, right 20mm
+// Margins
 const ML = 20;
 const MR = 20;
 const MT_FIRST = 30;
 const MB = 25;
-const HEADER_H = 22; // header reserved space on pages > 1
+const HEADER_H = 22;
 const FOOTER_H = 12;
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -35,6 +35,26 @@ function fmtDateShort(d: string) {
 }
 function fmtDateTime(d: string) {
   try { return format(new Date(d), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }); } catch { return d; }
+}
+
+/**
+ * Sanitize text to remove characters unsupported by jsPDF built-in fonts.
+ * Replaces common Unicode symbols with ASCII equivalents.
+ */
+function sanitizeText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/[\u2713\u2714\u2705]/g, "[OK]")   // ✓ ✔ ✅
+    .replace(/[\u25CB\u25EF\u26AA]/g, "[-]")     // ○ ◯ ⚪
+    .replace(/[\u26A0\uFE0F]/g, "[!]")           // ⚠ ⚠️
+    .replace(/[\u00D8\u00DC\u00CB\u00E6\u00FE]/g, "") // Ø Ü Ë æ þ
+    .replace(/[\u2022]/g, "-")                    // •
+    .replace(/[^\x00-\x7F\u00C0-\u00FF\u0100-\u017F]/g, (ch) => {
+      // Keep Latin Extended but strip other multi-byte
+      const code = ch.charCodeAt(0);
+      if (code >= 0x00C0 && code <= 0x017F) return ch;
+      return "";
+    });
 }
 
 async function computeHash(content: string): Promise<string> {
@@ -121,6 +141,14 @@ async function fetchFotos(rdoDiaId: string) {
   });
 }
 
+// ── Fetch CREA/CAU from company ──
+async function fetchCompanyCreaCau(companyId: string): Promise<string | null> {
+  try {
+    const { data } = await supabase.from("companies").select("crea_cau").eq("id", companyId).single();
+    return data?.crea_cau || null;
+  } catch { return null; }
+}
+
 // ── Chart helpers ──
 function drawBarChart(
   doc: jsPDF, x: number, y: number, w: number, h: number,
@@ -205,10 +233,7 @@ function addWatermark(doc: jsPDF, text: string) {
   doc.setFontSize(50);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BLUE_TECH[0], BLUE_TECH[1], BLUE_TECH[2]);
-  // Rotated watermark
-  const cx = pageW / 2;
-  const cy = pageH / 2;
-  doc.text(text.toUpperCase(), cx, cy, { align: "center", angle: 45 });
+  doc.text(sanitizeText(text.toUpperCase()), pageW / 2, pageH / 2, { align: "center", angle: 45 });
   doc.restoreGraphicsState();
 }
 
@@ -226,27 +251,24 @@ function addInstitutionalHeader(
   if (logoBase64) {
     try { doc.addImage(logoBase64, "PNG", hx, 4, 12, 6); hx += 14; } catch {}
   }
-  // Left: Company/Project
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BC[0], BC[1], BC[2]);
-  doc.text("RELATÓRIO TÉCNICO DE ACOMPANHAMENTO DE OBRA", hx, 8);
+  doc.text("RELATORIO TECNICO DE ACOMPANHAMENTO DE OBRA", hx, 8);
   doc.setFontSize(6);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-  doc.text(`Obra: ${projectName}`, hx, 12);
+  doc.text(sanitizeText(`Obra: ${projectName}`), hx, 12);
 
-  // Right: responsible + date info
   const rightX = pageW - MR;
   if (technicalResponsible) {
     doc.setFontSize(6);
-    doc.text(`Resp. Técnico: ${technicalResponsible}`, rightX, 8, { align: "right" });
+    doc.text(sanitizeText(`Resp. Tecnico: ${technicalResponsible}`), rightX, 8, { align: "right" });
   }
   if (companyName) {
-    doc.text(companyName, rightX, 12, { align: "right" });
+    doc.text(sanitizeText(companyName), rightX, 12, { align: "right" });
   }
 
-  // Divider line
   doc.setDrawColor(BC[0], BC[1], BC[2]);
   doc.setLineWidth(0.3);
   doc.line(ML, 15, pageW - MR, 15);
@@ -267,19 +289,18 @@ function addInstitutionalFooter(
   doc.setFontSize(6);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(140, 140, 140);
-  doc.text("Relatório Técnico de Acompanhamento de Obra — Documento gerado automaticamente pelo ERP", ML, fy + 4);
+  doc.text("Relatorio Tecnico de Acompanhamento de Obra - Documento gerado automaticamente pelo ERP", ML, fy + 4);
   if (generatedAt) {
-    doc.text(`Data de geração: ${generatedAt}`, ML, fy + 8);
+    doc.text(`Data de geracao: ${generatedAt}`, ML, fy + 8);
   }
-  doc.text(`Página ${pageNum} de ${totalPages}`, pageW - MR, fy + 4, { align: "right" });
+  doc.text(`Pagina ${pageNum} de ${totalPages}`, pageW - MR, fy + 4, { align: "right" });
   if (companyName) {
-    doc.text(companyName, pageW - MR, fy + 8, { align: "right" });
+    doc.text(sanitizeText(companyName), pageW - MR, fy + 8, { align: "right" });
   }
 }
 
 function addSectionTitle(doc: jsPDF, title: string, y: number, BC: [number, number, number] = BLUE_TECH): number {
   const pageW = doc.internal.pageSize.getWidth();
-  // Decorative line
   doc.setDrawColor(BC[0], BC[1], BC[2]);
   doc.setLineWidth(0.6);
   doc.line(ML, y - 2, pageW - MR, y - 2);
@@ -287,7 +308,7 @@ function addSectionTitle(doc: jsPDF, title: string, y: number, BC: [number, numb
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BC[0], BC[1], BC[2]);
-  doc.text(title, ML, y + 4);
+  doc.text(sanitizeText(title), ML, y + 4);
 
   doc.setLineWidth(0.3);
   doc.line(ML, y + 7, pageW - MR, y + 7);
@@ -310,9 +331,25 @@ function addBodyText(doc: jsPDF, text: string, y: number, maxW?: number): number
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-  const lines = doc.splitTextToSize(text, w);
+  const lines = doc.splitTextToSize(sanitizeText(text), w);
   doc.text(lines, ML, y);
   return y + lines.length * 4.2 + 2;
+}
+
+/**
+ * Generate a technical description for a photo when none is provided.
+ */
+function buildPhotoCaption(foto: any, faseObra: string | null): string {
+  if (foto.descricao && foto.descricao.trim()) {
+    return foto.descricao.trim();
+  }
+  // Build from metadata
+  const parts: string[] = [];
+  if (faseObra) parts.push(`Registro fotografico da fase de ${faseObra}`);
+  else parts.push("Registro fotografico da obra");
+  if (foto.fase_obra) parts.push(`etapa ${foto.fase_obra}`);
+  if (foto.tag_risco && foto.tag_risco !== "nenhuma") parts.push(`com identificacao de risco: ${foto.tag_risco}`);
+  return parts.join(", ") + ".";
 }
 
 // ══════════════════════════════════════════════════════
@@ -340,6 +377,9 @@ export async function generateRdoPDF(
   const pageH = doc.internal.pageSize.getHeight();
   const contentW = pageW - ML - MR;
 
+  // Fetch CREA/CAU
+  const creaCau = await fetchCompanyCreaCau(companyId);
+
   // Hash & QR
   onProgress?.("Calculando hash de integridade...");
   const integrityHash = await computeHash(JSON.stringify({ reportId, projectName, generated: now.toISOString(), count: rdos.length, ids: rdos.map((r) => r.id) }));
@@ -350,20 +390,24 @@ export async function generateRdoPDF(
   const sorted = [...rdos].sort((a, b) => a.data.localeCompare(b.data));
   const period = sorted.length > 0 ? `${fmtDateShort(sorted[0].data)} a ${fmtDateShort(sorted[sorted.length - 1].data)}` : "—";
 
+  // Dynamic section counter
+  let secNum = 0;
+  function nextSec(): number { return ++secNum; }
+
   // Bookmark tracking
   const bookmarks: { title: string; page: number; children?: { title: string; page: number }[] }[] = [];
   function trackSection(title: string) {
     bookmarks.push({ title, page: doc.getNumberOfPages() });
   }
 
-  // Pre-fetch all sub-data to avoid N+1 queries per RDO during rendering
+  // Pre-fetch all sub-data
   onProgress?.("Carregando dados detalhados...");
   const allAtividades: Record<string, any[]> = {};
   const allOcorrencias: Record<string, any[]> = {};
   const allMateriais: Record<string, any[]> = {};
   const allDespesas: Record<string, any[]> = {};
   const allFotos: Record<string, any[]> = {};
-  
+
   for (const rdo of sorted) {
     const [atividades, ocorrencias, materiais, despesas, fotos] = await Promise.all([
       includeActivities ? fetchAtividades(rdo.id) : Promise.resolve([]),
@@ -379,16 +423,20 @@ export async function generateRdoPDF(
     allFotos[rdo.id] = fotos;
   }
 
+  // Determine which conditional sections will appear
+  const hasAnyAtividade = includeActivities && sorted.some((r) => (allAtividades[r.id] || []).length > 0);
+  const hasAnyOcorrencia = includeOccurrences && sorted.some((r) => (allOcorrencias[r.id] || []).length > 0);
+  const hasAnyDespesaPdf = includeDespesas && sorted.some((r) => (allDespesas[r.id] || []).filter((d: any) => d.incluir_no_pdf).length > 0);
+  const hasAnyPhoto = includePhotos && sorted.some((r) => (allFotos[r.id] || []).length > 0);
+
   // ══════════════════════════════════════════
   // 1. CAPA INSTITUCIONAL
   // ══════════════════════════════════════════
   onProgress?.("Gerando capa institucional...");
 
-  // Top band
   doc.setFillColor(BC[0], BC[1], BC[2]);
   doc.rect(0, 0, pageW, 50, "F");
 
-  // Logo on cover
   if (logoBase64) {
     try { doc.addImage(logoBase64, "PNG", (pageW - 40) / 2, 8, 40, 20); } catch {}
   }
@@ -396,44 +444,42 @@ export async function generateRdoPDF(
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(255, 255, 255);
-  doc.text("DIÁRIO TÉCNICO DE EXECUÇÃO", pageW / 2, 38, { align: "center" });
+  doc.text("DIARIO TECNICO DE EXECUCAO", pageW / 2, 38, { align: "center" });
   doc.setFontSize(7);
-  doc.text(companyName || "", pageW / 2, 44, { align: "center" });
+  doc.text(sanitizeText(companyName || ""), pageW / 2, 44, { align: "center" });
 
-  // Main title
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BC[0], BC[1], BC[2]);
-  doc.text("RELATÓRIO TÉCNICO DE", pageW / 2, 72, { align: "center" });
+  doc.text("RELATORIO TECNICO DE", pageW / 2, 72, { align: "center" });
   doc.text("ACOMPANHAMENTO DE OBRA", pageW / 2, 82, { align: "center" });
 
-  // Divider
   doc.setDrawColor(BC[0], BC[1], BC[2]);
   doc.setLineWidth(1);
   doc.line(60, 90, pageW - 60, 90);
 
-  // Project info box
   const infoStartY = 100;
   doc.setFillColor(GRAY_LIGHT[0], GRAY_LIGHT[1], GRAY_LIGHT[2]);
-  doc.roundedRect(30, infoStartY, pageW - 60, 70, 2, 2, "F");
+  doc.roundedRect(30, infoStartY, pageW - 60, 78, 2, 2, "F");
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
 
   const coverInfo: [string, string][] = [
-    ["Obra:", projectName],
-    ["Município / UF:", options.municipality || "—"],
-    ["Empresa Executora:", companyName || "—"],
-    ["Endereço:", companyAddress || "—"],
-    ["Período:", period],
-    ["Data do Relatório:", generatedAt],
-    ["Responsável Técnico:", technicalResponsible || "—"],
-    ["Nº do Documento:", reportId],
+    ["Obra:", sanitizeText(projectName)],
+    ["Municipio / UF:", sanitizeText(options.municipality || "---")],
+    ["Empresa Executora:", sanitizeText(companyName || "---")],
+    ["Endereco:", sanitizeText(companyAddress || "---")],
+    ["Periodo:", period],
+    ["Data do Relatorio:", generatedAt],
+    ["Responsavel Tecnico:", sanitizeText(technicalResponsible || "---")],
+    ["CREA / CAU:", sanitizeText(creaCau || "---")],
+    ["No do Documento:", reportId],
   ];
 
   coverInfo.forEach(([label, value], i) => {
-    const ly = infoStartY + 10 + i * 8;
+    const ly = infoStartY + 10 + i * 7.5;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.text(label, 38, ly);
@@ -441,13 +487,11 @@ export async function generateRdoPDF(
     doc.text(value, 90, ly);
   });
 
-  // QR on cover
-  doc.addImage(qrDataUrl, "PNG", pageW - 70, infoStartY + 30, 28, 28);
+  doc.addImage(qrDataUrl, "PNG", pageW - 70, infoStartY + 35, 28, 28);
   doc.setFontSize(6);
   doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-  doc.text("Autenticidade", pageW - 56, infoStartY + 62, { align: "center" });
+  doc.text("Autenticidade", pageW - 56, infoStartY + 67, { align: "center" });
 
-  // Bottom band
   doc.setFillColor(BC[0], BC[1], BC[2]);
   doc.rect(0, pageH - 20, pageW, 20, "F");
   doc.setFontSize(7);
@@ -456,35 +500,38 @@ export async function generateRdoPDF(
   doc.text("Documento gerado automaticamente pelo ERP Canteiro Inteli", pageW / 2, pageH - 6, { align: "center" });
 
   // ══════════════════════════════════════════
-  // 2. SUMÁRIO (placeholder, filled at end)
+  // SUMARIO (placeholder, filled at end)
   // ══════════════════════════════════════════
   doc.addPage();
-  trackSection("SUMÁRIO");
+  trackSection("SUMARIO");
   const tocPageNum = doc.getNumberOfPages();
 
   // ══════════════════════════════════════════
-  // SECTION 1: IDENTIFICAÇÃO DO RELATÓRIO
+  // IDENTIFICACAO DO RELATORIO
   // ══════════════════════════════════════════
-  onProgress?.("Gerando identificação...");
+  onProgress?.("Gerando identificacao...");
   doc.addPage();
-  trackSection("1. IDENTIFICAÇÃO DO RELATÓRIO");
-  let y = addSectionTitle(doc, "1. IDENTIFICAÇÃO DO RELATÓRIO", HEADER_H + 4, BC);
+  const secIdentificacao = nextSec();
+  const secIdentTitle = `${secIdentificacao}. IDENTIFICACAO DO RELATORIO`;
+  trackSection(secIdentTitle);
+  let y = addSectionTitle(doc, secIdentTitle, HEADER_H + 4, BC);
 
   autoTable(doc, {
     startY: y,
-    head: [["Item", "Informação"]],
+    head: [["Item", "Informacao"]],
     body: [
-      ["Obra", projectName],
-      ["Município / UF", options.municipality || "—"],
-      ["Empresa Executora", companyName || "—"],
-      ["Endereço", companyAddress || "—"],
-      ["Telefone", companyPhone || "—"],
-      ["Período de Registros", period],
+      ["Obra", sanitizeText(projectName)],
+      ["Municipio / UF", sanitizeText(options.municipality || "---")],
+      ["Empresa Executora", sanitizeText(companyName || "---")],
+      ["Endereco", sanitizeText(companyAddress || "---")],
+      ["Telefone", companyPhone || "---"],
+      ["Periodo de Registros", period],
       ["Total de Registros RDO", String(sorted.length)],
-      ["Data de Geração", generatedAt],
+      ["Data de Geracao", generatedAt],
       ["Gerado por", userName || "Sistema"],
-      ["Responsável Técnico", technicalResponsible || "—"],
-      ["Nº do Documento", reportId],
+      ["Responsavel Tecnico", sanitizeText(technicalResponsible || "---")],
+      ["CREA / CAU", sanitizeText(creaCau || "---")],
+      ["No do Documento", reportId],
     ],
     theme: "grid",
     headStyles: { fillColor: [BC[0], BC[1], BC[2]], font: "helvetica", fontStyle: "bold" },
@@ -494,119 +541,133 @@ export async function generateRdoPDF(
   });
 
   // ══════════════════════════════════════════
-  // SECTION 2: OBJETIVO
+  // OBJETIVO
   // ══════════════════════════════════════════
   doc.addPage();
-  trackSection("2. OBJETIVO");
-  y = addSectionTitle(doc, "2. OBJETIVO", HEADER_H + 4, BC);
+  const secObjetivo = nextSec();
+  const secObjTitle = `${secObjetivo}. OBJETIVO`;
+  trackSection(secObjTitle);
+  y = addSectionTitle(doc, secObjTitle, HEADER_H + 4, BC);
   y = addBodyText(doc,
-    "O presente relatório técnico tem por finalidade registrar as atividades executadas na obra, " +
-    "bem como documentar ocorrências relevantes, condições de execução e evidências fotográficas " +
-    "referentes ao período do registro. Este documento é parte integrante do Diário de Obra e " +
-    "possui caráter técnico e documental, sendo adequado para fins de fiscalização, auditoria " +
+    "O presente relatorio tecnico tem por finalidade registrar as atividades executadas na obra, " +
+    "bem como documentar ocorrencias relevantes, condicoes de execucao e evidencias fotograficas " +
+    "referentes ao periodo do registro. Este documento e parte integrante do Diario de Obra e " +
+    "possui carater tecnico e documental, sendo adequado para fins de fiscalizacao, auditoria " +
     "e processos administrativos.",
     y
   );
 
   // ══════════════════════════════════════════
-  // SECTION 3: METODOLOGIA
+  // METODOLOGIA
   // ══════════════════════════════════════════
   y = ensureSpace(doc, y + 6, 40);
+  const secMetodologia = nextSec();
+  const secMetTitle = `${secMetodologia}. METODOLOGIA`;
   if (y <= HEADER_H + 10) {
-    trackSection("3. METODOLOGIA");
+    trackSection(secMetTitle);
   }
-  y = addSectionTitle(doc, "3. METODOLOGIA", y, BC);
+  y = addSectionTitle(doc, secMetTitle, y, BC);
   y = addBodyText(doc,
-    "As informações contidas neste relatório foram obtidas por meio de acompanhamento técnico " +
-    "da obra, registros fotográficos georreferenciados, observações de campo, comunicação com " +
-    "a equipe executora e dados inseridos no sistema de gestão de obras (ERP). " +
-    "Os registros fotográficos foram obtidos in loco e possuem metadados de data/hora e, quando " +
-    "disponível, coordenadas GPS. Os dados quantitativos de produtividade, custo e avanço físico " +
-    "foram registrados diariamente pelo responsável técnico da obra.",
+    "As informacoes contidas neste relatorio foram obtidas por meio de acompanhamento tecnico " +
+    "da obra, registros fotograficos georreferenciados, observacoes de campo, comunicacao com " +
+    "a equipe executora e dados inseridos no sistema de gestao de obras (ERP). " +
+    "Os registros fotograficos foram obtidos in loco e possuem metadados de data/hora e, quando " +
+    "disponivel, coordenadas GPS. Os dados quantitativos de produtividade, custo e avanco fisico " +
+    "foram registrados diariamente pelo responsavel tecnico da obra.",
     y
   );
 
   // ══════════════════════════════════════════
-  // SECTION 4: DESCRIÇÃO DAS ATIVIDADES
+  // DESCRICAO DAS ATIVIDADES EXECUTADAS (conditional)
   // ══════════════════════════════════════════
   if (includeActivities) {
-    onProgress?.("Gerando descrição das atividades...");
+    onProgress?.("Gerando descricao das atividades...");
     doc.addPage();
-    trackSection("4. DESCRIÇÃO DAS ATIVIDADES EXECUTADAS");
-    y = addSectionTitle(doc, "4. DESCRIÇÃO DAS ATIVIDADES EXECUTADAS", HEADER_H + 4, BC);
+    const secAtiv = nextSec();
+    const secAtivTitle = `${secAtiv}. DESCRICAO DAS ATIVIDADES EXECUTADAS`;
+    trackSection(secAtivTitle);
+    y = addSectionTitle(doc, secAtivTitle, HEADER_H + 4, BC);
 
-    for (let idx = 0; idx < sorted.length; idx++) {
-      const rdo = sorted[idx];
-      const atividades = allAtividades[rdo.id] || [];
-      if (atividades.length === 0) continue;
+    if (!hasAnyAtividade) {
+      y = addBodyText(doc, "Nao foram registradas atividades detalhadas no periodo analisado.", y);
+    } else {
+      for (let idx = 0; idx < sorted.length; idx++) {
+        const rdo = sorted[idx];
+        const atividades = allAtividades[rdo.id] || [];
+        if (atividades.length === 0) continue;
 
-      y = ensureSpace(doc, y, 20);
+        y = ensureSpace(doc, y, 20);
 
-      // Date sub-header
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(BC[0], BC[1], BC[2]);
-      doc.text(`${fmtDate(rdo.data)} — ${rdo.fase_obra || "Fase não informada"}`, ML, y);
-      y += 2;
+        // Date sub-header
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(BC[0], BC[1], BC[2]);
+        doc.text(sanitizeText(`${fmtDate(rdo.data)} - ${rdo.fase_obra || "Fase nao informada"}`), ML, y);
+        y += 2;
 
-      // Metadata line
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-      doc.text(`Clima: ${rdo.clima}  |  Equipe: ${rdo.equipe_total}  |  Horas: ${rdo.horas_trabalhadas}h  |  Risco: ${rdo.risco_dia || "baixo"}`, ML, y + 4);
-      y += 8;
-
-      // Activities as bullet points
-      for (const a of atividades) {
-        y = ensureSpace(doc, y, 8);
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-        const bullet = `• ${a.descricao}`;
-        const lines = doc.splitTextToSize(bullet, contentW - 5);
-        doc.text(lines, ML + 3, y);
-        y += lines.length * 4.2;
-
-        // Status indicators
         doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
         doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-        const statusParts = [
-          `Tipo: ${a.tipo_atividade}`,
-          a.concluida ? "✓ Concluída" : "○ Em andamento",
-          a.impacto_cronograma && a.impacto_cronograma !== "nenhum" ? `Impacto: ${a.impacto_cronograma}` : null,
-        ].filter(Boolean).join("  |  ");
-        doc.text(statusParts, ML + 6, y);
+        doc.text(`Clima: ${rdo.clima}  |  Equipe: ${rdo.equipe_total}  |  Horas: ${rdo.horas_trabalhadas}h  |  Risco: ${rdo.risco_dia || "baixo"}`, ML, y + 4);
+        y += 8;
+
+        // Subtitle
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+        doc.text("Atividades executadas:", ML, y);
         y += 5;
-      }
 
-      // General observations
-      if (rdo.observacoes_gerais) {
-        y = ensureSpace(doc, y, 10);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(80, 80, 80);
-        const obsLines = doc.splitTextToSize(`Obs: ${rdo.observacoes_gerais}`, contentW - 10);
-        doc.text(obsLines, ML + 3, y);
-        y += obsLines.length * 3.8 + 4;
-      }
+        for (const a of atividades) {
+          y = ensureSpace(doc, y, 8);
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+          const bullet = `- ${sanitizeText(a.descricao)}`;
+          const lines = doc.splitTextToSize(bullet, contentW - 5);
+          doc.text(lines, ML + 3, y);
+          y += lines.length * 4.2;
 
-      y += 4; // spacing between days
+          // Status indicators (ASCII only)
+          doc.setFontSize(7);
+          doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+          const statusParts = [
+            `Tipo: ${a.tipo_atividade}`,
+            a.concluida ? "[OK] Concluida" : "[-] Em andamento",
+            a.impacto_cronograma && a.impacto_cronograma !== "nenhum" ? `Impacto: ${a.impacto_cronograma}` : null,
+          ].filter(Boolean).join("  |  ");
+          doc.text(statusParts, ML + 6, y);
+          y += 5;
+        }
+
+        if (rdo.observacoes_gerais) {
+          y = ensureSpace(doc, y, 10);
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "italic");
+          doc.setTextColor(80, 80, 80);
+          const obsLines = doc.splitTextToSize(sanitizeText(`Obs: ${rdo.observacoes_gerais}`), contentW - 10);
+          doc.text(obsLines, ML + 3, y);
+          y += obsLines.length * 3.8 + 4;
+        }
+
+        y += 4;
+      }
     }
   }
 
   // ══════════════════════════════════════════
-  // SECTION 5: OCORRÊNCIAS E FATOS RELEVANTES
+  // OCORRENCIAS E FATOS RELEVANTES (conditional)
   // ══════════════════════════════════════════
   if (includeOccurrences) {
-    onProgress?.("Gerando ocorrências...");
-    const hasAnyOcorrencia = sorted.some((r) => (allOcorrencias[r.id] || []).length > 0);
-    
+    onProgress?.("Gerando ocorrencias...");
     doc.addPage();
-    trackSection("5. OCORRÊNCIAS E FATOS RELEVANTES");
-    y = addSectionTitle(doc, "5. OCORRÊNCIAS E FATOS RELEVANTES", HEADER_H + 4, BC);
+    const secOcorr = nextSec();
+    const secOcorrTitle = `${secOcorr}. OCORRENCIAS E FATOS RELEVANTES`;
+    trackSection(secOcorrTitle);
+    y = addSectionTitle(doc, secOcorrTitle, HEADER_H + 4, BC);
 
     if (!hasAnyOcorrencia) {
-      y = addBodyText(doc, "Não foram registradas ocorrências relevantes no período analisado.", y);
+      y = addBodyText(doc, "Nao foram registradas ocorrencias relevantes no periodo analisado.", y);
     } else {
       for (const rdo of sorted) {
         const ocorrencias = allOcorrencias[rdo.id] || [];
@@ -622,31 +683,27 @@ export async function generateRdoPDF(
         for (const o of ocorrencias) {
           y = ensureSpace(doc, y, 25);
 
-          // Warning box
           doc.setFillColor(WARN_BG[0], WARN_BG[1], WARN_BG[2]);
           doc.setDrawColor(WARN_BORDER[0], WARN_BORDER[1], WARN_BORDER[2]);
           doc.setLineWidth(0.5);
 
-          const descLines = doc.splitTextToSize(o.descricao, contentW - 16);
+          const descLines = doc.splitTextToSize(sanitizeText(o.descricao), contentW - 16);
           const boxH = 14 + descLines.length * 4;
           doc.roundedRect(ML, y, contentW, boxH, 1, 1, "FD");
 
-          // Warning header
           doc.setFontSize(8);
           doc.setFont("helvetica", "bold");
           doc.setTextColor(180, 120, 0);
-          doc.text("⚠ OCORRÊNCIA TÉCNICA REGISTRADA", ML + 4, y + 5);
+          doc.text("[!] OCORRENCIA TECNICA REGISTRADA", ML + 4, y + 5);
 
-          // Type and impact badges
           doc.setFontSize(7);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
           const meta = [`Tipo: ${o.tipo_ocorrencia}`, `Impacto: ${o.impacto || "baixo"}`];
-          if (o.responsavel) meta.push(`Responsável: ${o.responsavel}`);
-          if (o.gera_risco_contratual) meta.push("⚠️ RISCO CONTRATUAL");
+          if (o.responsavel) meta.push(`Responsavel: ${sanitizeText(o.responsavel)}`);
+          if (o.gera_risco_contratual) meta.push("[!] RISCO CONTRATUAL");
           doc.text(meta.join("  |  "), ML + 4, y + 10);
 
-          // Description
           doc.setFontSize(9);
           doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
           doc.text(descLines, ML + 4, y + 16);
@@ -658,80 +715,77 @@ export async function generateRdoPDF(
   }
 
   // ══════════════════════════════════════════
-  // SECTION 6: DESPESAS DO PERÍODO
+  // DESPESAS DO PERIODO (conditional)
   // ══════════════════════════════════════════
-  if (includeDespesas) {
+  if (includeDespesas && hasAnyDespesaPdf) {
     onProgress?.("Gerando despesas...");
-    const hasAnyDespesa = sorted.some((r) => (allDespesas[r.id] || []).filter((d: any) => d.incluir_no_pdf).length > 0);
+    doc.addPage();
+    const secDesp = nextSec();
+    const secDespTitle = `${secDesp}. DESPESAS DO PERIODO`;
+    trackSection(secDespTitle);
+    y = addSectionTitle(doc, secDespTitle, HEADER_H + 4, BC);
 
-    if (hasAnyDespesa) {
-      doc.addPage();
-      trackSection("6. DESPESAS DO PERÍODO");
-      y = addSectionTitle(doc, "6. DESPESAS DO PERÍODO", HEADER_H + 4, BC);
+    const tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mao de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
+    let totalGeral = 0;
 
-      const tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mão de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
-      let totalGeral = 0;
+    for (const rdo of sorted) {
+      const despesas = (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf);
+      if (despesas.length === 0) continue;
 
-      for (const rdo of sorted) {
-        const despesas = (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf);
-        if (despesas.length === 0) continue;
-
-        y = ensureSpace(doc, y, 20);
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(BC[0], BC[1], BC[2]);
-        doc.text(fmtDateShort(rdo.data), ML, y);
-        y += 2;
-
-        autoTable(doc, {
-          startY: y,
-          head: [["Descrição", "Tipo", "Qtd", "Unid.", "V. Unit.", "V. Total"]],
-          body: despesas.map((d: any) => [
-            d.descricao.substring(0, 50),
-            tipoLabels[d.tipo] || d.tipo,
-            String(d.quantidade || 0),
-            d.unidade || "un",
-            `R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-            `R$ ${Number(d.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-          ]),
-          theme: "grid",
-          headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-          styles: { fontSize: 7, cellPadding: 2 },
-          margin: { left: ML, right: MR, top: HEADER_H + 4 },
-        });
-        y = (doc as any).lastAutoTable?.finalY + 2 || y + 20;
-        const subtotal = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
-        totalGeral += subtotal;
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-        doc.text(`Subtotal: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 2);
-        y += 8;
-      }
-
-      y = ensureSpace(doc, y, 10);
-      doc.setFontSize(10);
+      y = ensureSpace(doc, y, 20);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(BC[0], BC[1], BC[2]);
-      doc.text(`TOTAL GERAL: R$ ${totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y);
-      y += 10;
+      doc.text(fmtDateShort(rdo.data), ML, y);
+      y += 2;
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Descricao", "Tipo", "Qtd", "Unid.", "V. Unit.", "V. Total"]],
+        body: despesas.map((d: any) => [
+          sanitizeText(d.descricao.substring(0, 50)),
+          tipoLabels[d.tipo] || d.tipo,
+          String(d.quantidade || 0),
+          d.unidade || "un",
+          `R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+          `R$ ${Number(d.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
+        styles: { fontSize: 7, cellPadding: 2 },
+        margin: { left: ML, right: MR, top: HEADER_H + 4 },
+      });
+      y = (doc as any).lastAutoTable?.finalY + 2 || y + 20;
+      const subtotal = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+      totalGeral += subtotal;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+      doc.text(`Subtotal: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 2);
+      y += 8;
     }
+
+    y = ensureSpace(doc, y, 10);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(BC[0], BC[1], BC[2]);
+    doc.text(`TOTAL GERAL: R$ ${totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y);
+    y += 10;
   }
 
   // ══════════════════════════════════════════
-  // SECTION 7: REGISTRO FOTOGRÁFICO COMENTADO
+  // REGISTRO FOTOGRAFICO COMENTADO (conditional)
   // ══════════════════════════════════════════
   if (includePhotos) {
-    onProgress?.("Gerando registro fotográfico...");
-    const hasAnyPhoto = sorted.some((r) => (allFotos[r.id] || []).length > 0);
-
+    onProgress?.("Gerando registro fotografico...");
     doc.addPage();
-    const photoSectionTitle = hasAnyPhoto ? "7. REGISTRO FOTOGRÁFICO COMENTADO" : "7. REGISTRO FOTOGRÁFICO";
-    trackSection(photoSectionTitle);
-    y = addSectionTitle(doc, photoSectionTitle, HEADER_H + 4, BC);
+    const secFoto = nextSec();
+    const secFotoTitle = `${secFoto}. REGISTRO FOTOGRAFICO COMENTADO`;
+    trackSection(secFotoTitle);
+    y = addSectionTitle(doc, secFotoTitle, HEADER_H + 4, BC);
 
     if (!hasAnyPhoto) {
-      y = addBodyText(doc, "Nenhum registro fotográfico foi inserido no período analisado.", y);
+      y = addBodyText(doc, "Nenhum registro fotografico foi inserido no periodo analisado.", y);
     } else {
       let figureNum = 1;
 
@@ -751,50 +805,43 @@ export async function generateRdoPDF(
           const isGrid = fi + 1 < fotos.length;
           const photosInRow = isGrid ? [fotos[fi], fotos[fi + 1]] : [fotos[fi]];
 
+          const imgW = isGrid ? (contentW - 6) / 2 : contentW * 0.6;
+          const imgH = imgW * 0.75;
+
+          y = ensureSpace(doc, y, imgH + 55);
+
           for (let pi = 0; pi < photosInRow.length; pi++) {
             const foto = photosInRow[pi];
-            const imgW = isGrid ? (contentW - 6) / 2 : contentW * 0.6;
-            const imgH = imgW * 0.75;
             const xOffset = isGrid ? ML + pi * (imgW + 6) : ML + (contentW - imgW) / 2;
 
-            y = ensureSpace(doc, y, imgH + 45);
-
-            onProgress?.(`Carregando foto ${figureNum}...`);
+            onProgress?.(`Carregando foto ${figureNum + pi}...`);
             const base64 = await loadImageAsBase64(foto.url);
             if (base64) {
               try {
-                // Photo border frame
                 doc.setDrawColor(180, 180, 180);
                 doc.setLineWidth(0.3);
                 doc.rect(xOffset - 1, y - 1, imgW + 2, imgH + 2);
                 doc.addImage(base64, "JPEG", xOffset, y, imgW, imgH);
               } catch { /* skip */ }
             }
-
-            // If grid, only add caption below after both images are placed
-            if (!isGrid || pi === 0) {
-              // For single image, add caption right after
-            }
           }
 
-          // Move y past the image row
-          const rowImgW = isGrid ? (contentW - 6) / 2 : contentW * 0.6;
-          const rowImgH = rowImgW * 0.75;
-          y += rowImgH + 4;
+          // Move y past images
+          y += imgH + 4;
 
-          // Captions for each photo in the row
+          // Captions
           for (let pi = 0; pi < photosInRow.length; pi++) {
             const foto = photosInRow[pi];
             const captionX = isGrid ? ML + pi * ((contentW - 6) / 2 + 6) : ML;
             const captionW = isGrid ? (contentW - 6) / 2 : contentW;
 
-            // Figure number
+            const caption = buildPhotoCaption(foto, rdo.fase_obra);
+
+            // Figure title
             doc.setFontSize(8);
             doc.setFont("helvetica", "bold");
             doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-            const figTitle = foto.descricao
-              ? `Figura ${String(figureNum).padStart(2, "0")} – ${foto.descricao.substring(0, 60)}`
-              : `Figura ${String(figureNum).padStart(2, "0")} – ${foto.file_name}`;
+            const figTitle = `Figura ${String(figureNum).padStart(2, "0")} - ${sanitizeText(caption.substring(0, 80))}`;
             const figLines = doc.splitTextToSize(figTitle, captionW);
             doc.text(figLines, captionX, y);
 
@@ -824,22 +871,33 @@ export async function generateRdoPDF(
               doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
             }
 
+            // Technical description block
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(80, 80, 80);
+            const techDesc = sanitizeText(caption);
+            const techLines = doc.splitTextToSize(`Descricao tecnica: ${techDesc}`, captionW);
+            doc.text(techLines, captionX, captionY);
+            captionY += techLines.length * 3.2;
+
             figureNum++;
           }
 
-          y += 18; // space after caption block
+          y += 22; // spacing after caption block (12px ~= 3.2mm, but generous spacing)
         }
       }
     }
   }
 
   // ══════════════════════════════════════════
-  // SECTION 8: INDICADORES TÉCNICOS
+  // INDICADORES TECNICOS
   // ══════════════════════════════════════════
-  onProgress?.("Gerando indicadores técnicos...");
+  onProgress?.("Gerando indicadores tecnicos...");
   doc.addPage();
-  trackSection("8. INDICADORES TÉCNICOS");
-  y = addSectionTitle(doc, "8. INDICADORES TÉCNICOS", HEADER_H + 4, BC);
+  const secIndic = nextSec();
+  const secIndicTitle = `${secIndic}. INDICADORES TECNICOS`;
+  trackSection(secIndicTitle);
+  y = addSectionTitle(doc, secIndicTitle, HEADER_H + 4, BC);
 
   const totalCost = sorted.reduce((s, r) => s + Number(r.custo_dia || 0), 0);
   const avgTeam = sorted.length > 0 ? Math.round(sorted.reduce((s, r) => s + r.equipe_total, 0) / sorted.length) : 0;
@@ -849,153 +907,184 @@ export async function generateRdoPDF(
   const riskCount: Record<string, number> = {};
   sorted.forEach((r) => { riskCount[r.risco_dia || "baixo"] = (riskCount[r.risco_dia || "baixo"] || 0) + 1; });
 
+  // Show note when indicators are zero
+  const allIndicatorsZero = avgProd === 0 && maxPhysical === 0 && totalCost === 0;
+
   autoTable(doc, {
     startY: y,
     head: [["Indicador", "Valor"]],
     body: [
       ["Total de registros RDO", String(sorted.length)],
-      ["Período analisado", period],
-      ["Custo total acumulado", `R$ ${totalCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`],
-      ["Média de equipe/dia", `${avgTeam} pessoas`],
-      ["Total de horas trabalhadas", `${totalHours}h`],
-      ["Produtividade média", `${avgProd}%`],
-      ["Avanço físico acumulado", `${maxPhysical}%`],
+      ["Periodo analisado", period],
+      ["Custo total acumulado", totalCost > 0 ? `R$ ${totalCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Nao informado"],
+      ["Media de equipe/dia", avgTeam > 0 ? `${avgTeam} pessoas` : "Nao informado"],
+      ["Total de horas trabalhadas", totalHours > 0 ? `${totalHours}h` : "Nao informado"],
+      ["Produtividade media", avgProd > 0 ? `${avgProd}%` : "Nao informado"],
+      ["Avanco fisico acumulado", maxPhysical > 0 ? `${maxPhysical}%` : "Nao informado"],
       ...Object.entries(riskCount).map(([r, c]) => [`Dias com risco ${r}`, `${c} dia(s)`]),
     ],
     theme: "grid",
-    headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
+    headStyles: { fillColor: [BC[0], BC[1], BC[2]], font: "helvetica", fontStyle: "bold" },
     styles: { fontSize: 9, cellPadding: 3 },
     columnStyles: { 0: { fontStyle: "bold", cellWidth: 70 } },
     margin: { left: ML, right: MR, top: HEADER_H + 4 },
   });
 
-  y = (doc as any).lastAutoTable?.finalY + 10 || y + 60;
+  y = (doc as any).lastAutoTable?.finalY + 8 || y + 60;
 
-  // Gauges
-  y = ensureSpace(doc, y, 60);
-  drawGauge(doc, ML + 25, y + 20, 18, avgProd, "Produtividade Média", BC);
-  drawGauge(doc, pageW / 2, y + 20, 18, maxPhysical, "Avanço Físico", BC);
-  const highRiskPct = sorted.length > 0 ? Math.round(((riskCount["alto"] || 0) / sorted.length) * 100) : 0;
-  drawGauge(doc, pageW - MR - 25, y + 20, 18, highRiskPct, "Risco Alto (%)", BC);
-  y += 55;
+  if (allIndicatorsZero) {
+    y = ensureSpace(doc, y, 15);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+    const noteLines = doc.splitTextToSize(
+      "Nota: Os indicadores acima apresentam valores nao informados pois os campos de produtividade, " +
+      "avanco fisico e custo diario nao foram preenchidos nos registros do periodo. " +
+      "Para obter indicadores completos, preencha esses campos ao registrar cada RDO.",
+      contentW
+    );
+    doc.text(noteLines, ML, y);
+    y += noteLines.length * 3.8 + 4;
+  }
 
-  // Bar charts
-  const last10 = sorted.slice(-10);
-  if (last10.length > 0) {
-    doc.addPage();
-    y = HEADER_H + 4;
-    drawBarChart(doc, ML, y + 10, contentW, 55, last10.map((r) => ({
-      label: fmtDateShort(r.data).substring(0, 5),
-      value: Number(r.produtividade_percentual || 0),
-      color: Number(r.produtividade_percentual || 0) >= 70 ? [34, 197, 94] as [number, number, number] : Number(r.produtividade_percentual || 0) >= 50 ? [234, 179, 8] as [number, number, number] : [239, 68, 68] as [number, number, number],
-    })), "Produtividade por Dia (últimos 10 registros)", "%", BC);
+  // Visual gauges (only if we have data)
+  if (!allIndicatorsZero) {
+    y = ensureSpace(doc, y, 50);
+    const gaugeY = y + 20;
+    const gaugeSpacing = contentW / 3;
+    drawGauge(doc, ML + gaugeSpacing * 0.5, gaugeY, 14, avgProd, "Produtividade", BC);
+    drawGauge(doc, ML + gaugeSpacing * 1.5, gaugeY, 14, maxPhysical, "Avanco Fisico", BC);
+    const costPct = totalCost > 0 ? Math.min(100, Math.round((totalCost / Math.max(totalCost * 1.2, 1)) * 100)) : 0;
+    drawGauge(doc, ML + gaugeSpacing * 2.5, gaugeY, 14, costPct, "Custo Exec.", BC);
+    y = gaugeY + 30;
 
-    drawBarChart(doc, ML, y + 85, contentW, 55, last10.map((r) => ({
-      label: fmtDateShort(r.data).substring(0, 5),
-      value: Number(r.custo_dia || 0),
-      color: BC,
-    })), "Custo Diário (R$) — últimos 10 registros", "", BC);
+    // Bar chart for team
+    if (sorted.length > 1 && sorted.length <= 15) {
+      y = ensureSpace(doc, y + 5, 50);
+      const barData = sorted.map((r) => ({
+        label: fmtDateShort(r.data),
+        value: r.equipe_total,
+        color: ACCENT as [number, number, number],
+      }));
+      drawBarChart(doc, ML, y, contentW, 35, barData, "Equipe por Dia", "", BC);
+      y += 45;
+    }
   }
 
   // ══════════════════════════════════════════
-  // SECTION 9: ANÁLISE TÉCNICA
+  // ANALISE TECNICA
   // ══════════════════════════════════════════
-  onProgress?.("Gerando análise técnica...");
+  onProgress?.("Gerando analise tecnica...");
   doc.addPage();
-  trackSection("9. ANÁLISE TÉCNICA");
-  y = addSectionTitle(doc, "9. ANÁLISE TÉCNICA", HEADER_H + 4, BC);
+  const secAnalise = nextSec();
+  const secAnaliseTitle = `${secAnalise}. ANALISE TECNICA`;
+  trackSection(secAnaliseTitle);
+  y = addSectionTitle(doc, secAnaliseTitle, HEADER_H + 4, BC);
 
-  // Auto-generated technical analysis
   const hasHighRisk = (riskCount["alto"] || 0) > 0;
   const hasMedRisk = (riskCount["medio"] || 0) > 0;
   const allOcorrenciasList = sorted.flatMap((r) => allOcorrencias[r.id] || []);
   const hasContractualRisk = allOcorrenciasList.some((o: any) => o.gera_risco_contratual);
 
-  let analysisText = `As atividades executadas durante o período de ${period} encontram-se ` +
-    `registradas de forma detalhada nos itens anteriores deste relatório. `;
+  let analysisText = `As atividades executadas durante o periodo de ${period} encontram-se ` +
+    `registradas de forma detalhada nos itens anteriores deste relatorio. `;
 
-  if (avgProd >= 70) {
-    analysisText += `A produtividade média de ${avgProd}% indica desempenho satisfatório da equipe executora. `;
+  if (allIndicatorsZero) {
+    analysisText += "Os indicadores quantitativos de produtividade e avanco fisico nao foram preenchidos nos registros do periodo, " +
+      "impossibilitando uma analise comparativa detalhada. Recomenda-se o preenchimento desses campos nos proximos registros. ";
+  } else if (avgProd >= 70) {
+    analysisText += `A produtividade media de ${avgProd}% indica desempenho satisfatorio da equipe executora. `;
   } else if (avgProd >= 50) {
-    analysisText += `A produtividade média de ${avgProd}% indica desempenho moderado, sendo recomendável atenção para eventuais melhorias no processo executivo. `;
+    analysisText += `A produtividade media de ${avgProd}% indica desempenho moderado, sendo recomendavel atencao para eventuais melhorias no processo executivo. `;
   } else {
-    analysisText += `A produtividade média de ${avgProd}% indica desempenho abaixo do esperado, requerendo análise das causas e implementação de ações corretivas. `;
+    analysisText += `A produtividade media de ${avgProd}% indica desempenho abaixo do esperado, requerendo analise das causas e implementacao de acoes corretivas. `;
   }
 
   if (hasHighRisk) {
-    analysisText += `Foram identificados ${riskCount["alto"]} dia(s) com classificação de risco alto, demandando atenção imediata da gestão técnica. `;
+    analysisText += `Foram identificados ${riskCount["alto"]} dia(s) com classificacao de risco alto, demandando atencao imediata da gestao tecnica. `;
   }
   if (hasContractualRisk) {
-    analysisText += `ATENÇÃO: Foram identificadas ocorrências com potencial risco contratual, conforme detalhado na seção de ocorrências. `;
+    analysisText += `ATENCAO: Foram identificadas ocorrencias com potencial risco contratual, conforme detalhado na secao de ocorrencias. `;
   }
 
   y = addBodyText(doc, analysisText, y);
 
-  // AI summary if available
   if (aiSummary) {
     y = ensureSpace(doc, y + 4, 20);
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(BC[0], BC[1], BC[2]);
-    doc.text("Análise Inteligente (IA)", ML, y);
+    doc.text("Analise Inteligente (IA)", ML, y);
     y += 5;
-    y = addBodyText(doc, aiSummary, y);
+    y = addBodyText(doc, sanitizeText(aiSummary), y);
   }
 
   // ══════════════════════════════════════════
-  // SECTION 10: CONCLUSÃO TÉCNICA
+  // CONCLUSAO TECNICA
   // ══════════════════════════════════════════
   doc.addPage();
-  trackSection("10. CONCLUSÃO TÉCNICA");
-  y = addSectionTitle(doc, "10. CONCLUSÃO TÉCNICA", HEADER_H + 4, BC);
+  const secConclusao = nextSec();
+  const secConcTitle = `${secConclusao}. CONCLUSAO TECNICA`;
+  trackSection(secConcTitle);
+  y = addSectionTitle(doc, secConcTitle, HEADER_H + 4, BC);
 
   const fases = [...new Set(sorted.map((r) => r.fase_obra).filter(Boolean))];
   const faseText = fases.length > 0 ? fases.join(", ") : "etapa atual";
 
-  y = addBodyText(doc,
-    `Com base nas observações realizadas durante o período analisado (${period}), ` +
-    `conclui-se que as atividades registradas correspondem à(s) etapa(s) de ${faseText} ` +
-    `prevista(s) para a fase atual da obra. ` +
-    `O avanço físico acumulado atingiu ${maxPhysical}%, com custo total de R$ ${totalCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. ` +
-    `A equipe média foi de ${avgTeam} pessoa(s) com ${totalHours} horas totais trabalhadas no período.`,
-    y
-  );
+  let conclusionText = `Com base nas observacoes realizadas durante o periodo analisado (${period}), ` +
+    `conclui-se que as atividades registradas correspondem a(s) etapa(s) de ${faseText} ` +
+    `prevista(s) para a fase atual da obra. `;
+
+  if (!allIndicatorsZero) {
+    conclusionText += `O avanco fisico acumulado atingiu ${maxPhysical}%, com custo total de R$ ${totalCost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. ` +
+      `A equipe media foi de ${avgTeam} pessoa(s) com ${totalHours} horas totais trabalhadas no periodo.`;
+  } else {
+    conclusionText += `A equipe media foi de ${avgTeam} pessoa(s) com ${totalHours} horas totais trabalhadas no periodo. ` +
+      `Os demais indicadores quantitativos nao foram preenchidos.`;
+  }
+
+  y = addBodyText(doc, conclusionText, y);
 
   if (hasHighRisk || hasMedRisk) {
     y += 4;
     y = addBodyText(doc,
-      "Ressalta-se que durante o período foram registrados dias com classificação de risco " +
-      (hasHighRisk ? "alto" : "médio") + ", conforme detalhado na seção de indicadores técnicos, " +
-      "requerendo monitoramento contínuo pela equipe de gestão.",
+      "Ressalta-se que durante o periodo foram registrados dias com classificacao de risco " +
+      (hasHighRisk ? "alto" : "medio") + ", conforme detalhado na secao de indicadores tecnicos, " +
+      "requerendo monitoramento continuo pela equipe de gestao.",
       y
     );
   }
 
   // ══════════════════════════════════════════
-  // SECTION 11: RECOMENDAÇÕES
+  // RECOMENDACOES
   // ══════════════════════════════════════════
   y = ensureSpace(doc, y + 8, 40);
+  const secRecom = nextSec();
+  const secRecomTitle = `${secRecom}. RECOMENDACOES`;
   if (y <= HEADER_H + 10) {
-    trackSection("11. RECOMENDAÇÕES");
+    trackSection(secRecomTitle);
   }
-  y = addSectionTitle(doc, "11. RECOMENDAÇÕES", y, BC);
+  y = addSectionTitle(doc, secRecomTitle, y, BC);
 
   const recommendations: string[] = [];
-  if (avgProd < 70) {
-    recommendations.push("Avaliar causas da produtividade abaixo da meta e implementar ações corretivas para melhoria do desempenho executivo.");
+  if (allIndicatorsZero) {
+    recommendations.push("Preencher os campos de produtividade, avanco fisico e custo diario nos proximos registros de RDO para permitir analise quantitativa completa.");
+  }
+  if (avgProd > 0 && avgProd < 70) {
+    recommendations.push("Avaliar causas da produtividade abaixo da meta e implementar acoes corretivas para melhoria do desempenho executivo.");
   }
   if (hasHighRisk) {
-    recommendations.push("Intensificar o monitoramento de segurança nos dias com classificação de risco alto, garantindo a implementação de medidas preventivas.");
+    recommendations.push("Intensificar o monitoramento de seguranca nos dias com classificacao de risco alto, garantindo a implementacao de medidas preventivas.");
   }
   if (hasContractualRisk) {
-    recommendations.push("Documentar e formalizar as ocorrências com risco contratual junto à contratante para fins de resguardo técnico e jurídico.");
+    recommendations.push("Documentar e formalizar as ocorrencias com risco contratual junto a contratante para fins de resguardo tecnico e juridico.");
   }
   if (allOcorrenciasList.length > 0) {
-    recommendations.push("Manter o registro sistemático de ocorrências para garantir rastreabilidade e possibilitar análises futuras de tendências.");
+    recommendations.push("Manter o registro sistematico de ocorrencias para garantir rastreabilidade e possibilitar analises futuras de tendencias.");
   }
   if (recommendations.length === 0) {
-    recommendations.push("Manter o ritmo de execução observado e a qualidade dos registros técnicos diários.");
-    recommendations.push("Continuar o acompanhamento fotográfico detalhado para fins de documentação e auditoria.");
+    recommendations.push("Manter o ritmo de execucao observado e a qualidade dos registros tecnicos diarios.");
+    recommendations.push("Continuar o acompanhamento fotografico detalhado para fins de documentacao e auditoria.");
   }
 
   for (const rec of recommendations) {
@@ -1003,21 +1092,22 @@ export async function generateRdoPDF(
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-    const lines = doc.splitTextToSize(`• ${rec}`, contentW - 5);
+    const lines = doc.splitTextToSize(`- ${rec}`, contentW - 5);
     doc.text(lines, ML + 3, y);
     y += lines.length * 4.2 + 2;
   }
 
   // ══════════════════════════════════════════
-  // SECTION 12: ASSINATURA TÉCNICA
+  // ASSINATURA TECNICA
   // ══════════════════════════════════════════
   doc.addPage();
-  trackSection("12. ASSINATURA TÉCNICA");
-  y = addSectionTitle(doc, "12. ASSINATURA TÉCNICA", HEADER_H + 4, BC);
+  const secAssina = nextSec();
+  const secAssinaTitle = `${secAssina}. ASSINATURA TECNICA`;
+  trackSection(secAssinaTitle);
+  y = addSectionTitle(doc, secAssinaTitle, HEADER_H + 4, BC);
 
   y += 30;
 
-  // Signature line centered
   const sigX = pageW / 2;
   doc.setDrawColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
   doc.setLineWidth(0.4);
@@ -1026,37 +1116,38 @@ export async function generateRdoPDF(
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-  doc.text("Responsável Técnico", sigX, y + 6, { align: "center" });
+  doc.text("Responsavel Tecnico", sigX, y + 6, { align: "center" });
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   if (technicalResponsible) {
-    doc.text(technicalResponsible, sigX, y + 12, { align: "center" });
+    doc.text(sanitizeText(technicalResponsible), sigX, y + 12, { align: "center" });
   }
   doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-  doc.text("CREA / CAU: _______________", sigX, y + 18, { align: "center" });
+  doc.text(`CREA / CAU: ${creaCau || "_______________"}`, sigX, y + 18, { align: "center" });
 
   y += 40;
 
-  // Date and location
   doc.setFontSize(9);
   doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
   doc.text(`Data: ${format(now, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`, sigX, y, { align: "center" });
 
   // ══════════════════════════════════════════
-  // SECTION 13: VERIFICAÇÃO & QR CODE
+  // INFORMACOES DE VERIFICACAO
   // ══════════════════════════════════════════
   doc.addPage();
-  trackSection("13. INFORMAÇÕES DE VERIFICAÇÃO");
-  y = addSectionTitle(doc, "13. INFORMAÇÕES DE VERIFICAÇÃO", HEADER_H + 4, BC);
+  const secVerif = nextSec();
+  const secVerifTitle = `${secVerif}. INFORMACOES DE VERIFICACAO`;
+  trackSection(secVerifTitle);
+  y = addSectionTitle(doc, secVerifTitle, HEADER_H + 4, BC);
 
   const verifyInfo = [
-    `Nº do Relatório: ${reportId}`,
+    `No do Relatorio: ${reportId}`,
     `Hash SHA-256: ${integrityHash}`,
     `Hash Resumido: ${shortHash}`,
-    `Data/Hora de Geração: ${now.toISOString()}`,
+    `Data/Hora de Geracao: ${now.toISOString()}`,
     `Gerado por: ${userName || "Sistema"}`,
-    `Obra: ${projectName}`,
+    `Obra: ${sanitizeText(projectName)}`,
     `Total de Registros RDO: ${sorted.length}`,
   ];
 
@@ -1069,15 +1160,15 @@ export async function generateRdoPDF(
   doc.addImage(qrDataUrl, "PNG", ML, y, 40, 40);
   doc.setFontSize(8);
   doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório.", ML, y + 46);
+  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatorio.", ML, y + 46);
 
   // ══════════════════════════════════════════
   // DRAW TOC WITH PAGE NUMBERS
   // ══════════════════════════════════════════
-  onProgress?.("Finalizando sumário...");
-  const tocEntries = bookmarks.filter((b) => b.title !== "SUMÁRIO");
+  onProgress?.("Finalizando sumario...");
+  const tocEntries = bookmarks.filter((b) => b.title !== "SUMARIO");
   doc.setPage(tocPageNum);
-  let tocY = addSectionTitle(doc, "SUMÁRIO", HEADER_H + 4, BC);
+  let tocY = addSectionTitle(doc, "SUMARIO", HEADER_H + 4, BC);
 
   for (const entry of tocEntries) {
     if (tocY > pageH - MB - 10) break;
@@ -1106,7 +1197,7 @@ export async function generateRdoPDF(
       for (const child of entry.children) {
         if (tocY > pageH - MB - 10) break;
         doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-        const childLabel = `  – ${child.title}`;
+        const childLabel = `  - ${child.title}`;
         doc.text(childLabel, ML + 8, tocY);
         const cTitleW = doc.getTextWidth(childLabel);
         const cPageStr = String(child.page);
@@ -1142,24 +1233,21 @@ export async function generateRdoPDF(
   }
 
   // ══════════════════════════════════════════
-  // HEADERS, FOOTERS & WATERMARK
+  // HEADERS, FOOTERS & WATERMARK (post-processing)
   // ══════════════════════════════════════════
   onProgress?.("Finalizando documento...");
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
 
-    // Watermark on all pages except cover
     if (i > 1 && companyName) {
       addWatermark(doc, companyName);
     }
 
-    // Header on all pages except cover
     if (i > 1) {
       addInstitutionalHeader(doc, projectName, companyName, technicalResponsible, logoBase64, BC);
     }
 
-    // Footer on all pages
     addInstitutionalFooter(doc, i, totalPages, reportId, shortHash, companyName, generatedAt);
   }
 
