@@ -22,6 +22,7 @@ export default function EmpresaConfig() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [technicalResponsible, setTechnicalResponsible] = useState("");
+  const [creaCau, setCreaCau] = useState("");
   const [brandColor, setBrandColor] = useState("#1E40AF");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [cnpjError, setCnpjError] = useState<string | null>(null);
