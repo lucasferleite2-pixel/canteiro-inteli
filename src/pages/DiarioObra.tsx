@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ClipboardList, Loader2, Sparkles, FileDown } from "lucide-react";
+import { Plus, ClipboardList, Loader2, Sparkles, FileDown, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_OBRAS, DEMO_RDO_ENTRIES, DEMO_DESPESAS } from "@/lib/demoData";
