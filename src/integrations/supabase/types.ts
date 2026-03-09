@@ -650,6 +650,7 @@ export type Database = {
           description: string | null
           expected_end_date: string | null
           id: string
+          municipality: string | null
           name: string
           start_date: string | null
           status: string
@@ -663,6 +664,7 @@ export type Database = {
           description?: string | null
           expected_end_date?: string | null
           id?: string
+          municipality?: string | null
           name: string
           start_date?: string | null
           status?: string
@@ -676,6 +678,7 @@ export type Database = {
           description?: string | null
           expected_end_date?: string | null
           id?: string
+          municipality?: string | null
           name?: string
           start_date?: string | null
           status?: string

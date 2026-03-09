@@ -31,6 +31,7 @@ export default function Obras() {
     name: "",
     description: "",
     address: "",
+    municipality: "",
     budget: "",
     start_date: "",
     expected_end_date: "",
@@ -62,17 +63,18 @@ export default function Obras() {
         name: form.name,
         description: form.description || null,
         address: form.address || null,
+        municipality: form.municipality || null,
         budget: form.budget ? parseFloat(form.budget) : 0,
         start_date: form.start_date || null,
         expected_end_date: form.expected_end_date || null,
         status: form.status,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setOpen(false);
-      setForm({ name: "", description: "", address: "", budget: "", start_date: "", expected_end_date: "", status: "planning" });
+      setForm({ name: "", description: "", address: "", municipality: "", budget: "", start_date: "", expected_end_date: "", status: "planning" });
       toast({ title: "Obra criada com sucesso!" });
     },
     onError: (err: any) => toast({ variant: "destructive", title: "Erro", description: err.message }),
@@ -108,8 +110,12 @@ export default function Obras() {
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Endereço</Label>
-                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <Label>Endereço Completo</Label>
+                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, número, bairro" />
+              </div>
+              <div className="space-y-2">
+                <Label>Município / UF</Label>
+                <Input value={form.municipality} onChange={(e) => setForm({ ...form, municipality: e.target.value })} placeholder="Ex: São Paulo - SP" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -177,9 +183,10 @@ export default function Obras() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  {obra.address && (
+                  {((obra as any).municipality || obra.address) && (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />{obra.address}
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>{(obra as any).municipality}{(obra as any).municipality && obra.address ? " — " : ""}{obra.address}</span>
                     </div>
                   )}
                   {obra.budget ? (

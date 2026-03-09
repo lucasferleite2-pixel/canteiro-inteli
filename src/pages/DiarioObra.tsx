@@ -41,7 +41,7 @@ export default function DiarioObra() {
     queryKey: ["projects", companyId],
     queryFn: async () => {
       if (!companyId) return [];
-      const { data, error } = await supabase.from("projects").select("id, name, status, address").eq("company_id", companyId).order("name");
+      const { data, error } = await supabase.from("projects").select("id, name, status, address, municipality").eq("company_id", companyId).order("name");
       if (error) throw error;
       return data;
     },
@@ -206,7 +206,7 @@ export default function DiarioObra() {
         await generateRdoPDF(
           {
             projectName: resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra",
-            municipality: (resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || undefined,
+            municipality: (resolvedProjects.find((p) => p.id === selectedProject) as any)?.municipality || (resolvedProjects.find((p) => p.id === selectedProject) as any)?.municipality || (resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || undefined,
             companyName: pdfFilters.companyName || undefined,
             companyAddress: pdfFilters.companyAddress || undefined,
             companyPhone: pdfFilters.companyPhone || undefined,
@@ -364,7 +364,7 @@ export default function DiarioObra() {
         open={showNcReport}
         onOpenChange={setShowNcReport}
         projectName={resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra"}
-        projectAddress={(resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || ""}
+        projectAddress={(resolvedProjects.find((p) => p.id === selectedProject) as any)?.municipality || (resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || ""}
       />
 
       {/* AI Panel */}
