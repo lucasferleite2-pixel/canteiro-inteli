@@ -110,8 +110,12 @@ export default function Obras() {
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Endereço</Label>
-                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <Label>Endereço Completo</Label>
+                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, número, bairro" />
+              </div>
+              <div className="space-y-2">
+                <Label>Município / UF</Label>
+                <Input value={form.municipality} onChange={(e) => setForm({ ...form, municipality: e.target.value })} placeholder="Ex: São Paulo - SP" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
