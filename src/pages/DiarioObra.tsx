@@ -21,6 +21,7 @@ import { RdoFilters, RdoFilterValues, defaultFilters } from "@/components/rdo/Rd
 import { RdoNewDayDialog } from "@/components/rdo/RdoNewDayDialog";
 import { RdoDashboard } from "@/components/rdo/RdoDashboard";
 import { DemoBanner } from "@/components/DemoBanner";
+import { NcReportDialog } from "@/components/rdo/NcReportDialog";
 
 export default function DiarioObra() {
   const { companyId, user, isDemo } = useAuth();
