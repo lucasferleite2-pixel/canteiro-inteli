@@ -36,6 +36,7 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   projectName: string;
+  projectAddress?: string;
 }
 
 function createEmptyItem(): NcItem {
@@ -52,12 +53,13 @@ function createEmptyItem(): NcItem {
   };
 }
 
-export function NcReportDialog({ open, onOpenChange, projectName }: Props) {
+export function NcReportDialog({ open, onOpenChange, projectName, projectAddress }: Props) {
   const { companyId, user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState("");
   const [items, setItems] = useState<NcItem[]>([createEmptyItem()]);
+  const [municipality, setMunicipality] = useState("");
   const [additionalNorms, setAdditionalNorms] = useState("");
   const [conclusions, setConclusions] = useState("");
 
@@ -72,7 +74,8 @@ export function NcReportDialog({ open, onOpenChange, projectName }: Props) {
 
   useEffect(() => {
     if (open && companyId) loadCompanyData();
-  }, [open, companyId]);
+    if (open && projectAddress) setMunicipality(projectAddress);
+  }, [open, companyId, projectAddress]);
 
   const loadCompanyData = async () => {
     if (!companyId) return;
@@ -123,6 +126,7 @@ export function NcReportDialog({ open, onOpenChange, projectName }: Props) {
       await generateNaoConformidadePDF(
         {
           projectName,
+          municipality: municipality || undefined,
           companyName: companyName || undefined,
           companyAddress: companyAddress || undefined,
           companyPhone: companyPhone || undefined,
@@ -174,6 +178,16 @@ export function NcReportDialog({ open, onOpenChange, projectName }: Props) {
               {severityCounts.leve > 0 && <Badge className="bg-green-500 hover:bg-green-600">{severityCounts.leve} Leve(s)</Badge>}
             </div>
           )}
+
+          {/* Municipality */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Município da Obra</Label>
+            <Input
+              placeholder="Ex: São Paulo - SP"
+              value={municipality}
+              onChange={(e) => setMunicipality(e.target.value)}
+            />
+          </div>
 
           {/* NC Items */}
           <div className="space-y-4">

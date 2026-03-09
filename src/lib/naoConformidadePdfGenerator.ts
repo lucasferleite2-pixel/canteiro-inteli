@@ -98,6 +98,7 @@ export interface NcItem {
 
 export interface NcPdfOptions {
   projectName: string;
+  municipality?: string;
   companyName?: string;
   companyAddress?: string;
   companyPhone?: string;
@@ -243,7 +244,7 @@ export async function generateNaoConformidadePDF(
   onProgress?: (step: string) => void
 ): Promise<void> {
   const {
-    projectName, companyName, companyAddress, companyPhone,
+    projectName, municipality, companyName, companyAddress, companyPhone,
     technicalResponsible, creaCau, userName, logoBase64, brandColor,
     items, additionalNorms, conclusions,
   } = options;
@@ -306,7 +307,7 @@ export async function generateNaoConformidadePDF(
   // Info box
   const infoStartY = 100;
   doc.setFillColor(WARN_BG[0], WARN_BG[1], WARN_BG[2]);
-  doc.roundedRect(30, infoStartY, pageW - 60, 78, 2, 2, "F");
+  doc.roundedRect(30, infoStartY, pageW - 60, 86, 2, 2, "F");
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -314,6 +315,7 @@ export async function generateNaoConformidadePDF(
 
   const coverInfo: [string, string][] = [
     ["Obra:", projectName],
+    ["Município / UF:", municipality || "—"],
     ["Empresa:", companyName || "—"],
     ["Endereço:", companyAddress || "—"],
     ["Responsável Técnico:", technicalResponsible || "—"],
@@ -333,7 +335,7 @@ export async function generateNaoConformidadePDF(
   });
 
   // Severity badge summary on cover
-  const badgeY = infoStartY + 82;
+  const badgeY = infoStartY + 90;
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
@@ -387,6 +389,7 @@ export async function generateNaoConformidadePDF(
     head: [["Item", "Informação"]],
     body: [
       ["Obra", projectName],
+      ["Município / UF", municipality || "—"],
       ["Empresa", companyName || "—"],
       ["Endereço", companyAddress || "—"],
       ["Telefone", companyPhone || "—"],

@@ -79,6 +79,7 @@ export interface RdoDia {
 
 export interface RdoPdfOptions {
   projectName: string;
+  municipality?: string;
   companyName?: string;
   companyAddress?: string;
   companyPhone?: string;
@@ -422,6 +423,7 @@ export async function generateRdoPDF(
 
   const coverInfo: [string, string][] = [
     ["Obra:", projectName],
+    ["Município / UF:", options.municipality || "—"],
     ["Empresa Executora:", companyName || "—"],
     ["Endereço:", companyAddress || "—"],
     ["Período:", period],
@@ -473,6 +475,7 @@ export async function generateRdoPDF(
     head: [["Item", "Informação"]],
     body: [
       ["Obra", projectName],
+      ["Município / UF", options.municipality || "—"],
       ["Empresa Executora", companyName || "—"],
       ["Endereço", companyAddress || "—"],
       ["Telefone", companyPhone || "—"],
