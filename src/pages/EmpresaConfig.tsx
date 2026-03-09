@@ -228,8 +228,12 @@ export default function EmpresaConfig() {
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" maxLength={20} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tech">Responsável Técnico (CREA/CAU)</Label>
-                <Input id="tech" value={technicalResponsible} onChange={(e) => setTechnicalResponsible(e.target.value)} placeholder="Eng. João – CREA 12345" maxLength={200} />
+                <Label htmlFor="tech">Responsável Técnico</Label>
+                <Input id="tech" value={technicalResponsible} onChange={(e) => setTechnicalResponsible(e.target.value)} placeholder="Eng. João da Silva" maxLength={200} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crea-cau">CREA / CAU</Label>
+                <Input id="crea-cau" value={creaCau} onChange={(e) => setCreaCau(e.target.value)} placeholder="CREA-SP 123456 / CAU A12345-6" maxLength={100} />
               </div>
             </div>
 
