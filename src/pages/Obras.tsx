@@ -183,9 +183,10 @@ export default function Obras() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  {obra.address && (
+                  {((obra as any).municipality || obra.address) && (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />{obra.address}
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>{(obra as any).municipality}{(obra as any).municipality && obra.address ? " — " : ""}{obra.address}</span>
                     </div>
                   )}
                   {obra.budget ? (
