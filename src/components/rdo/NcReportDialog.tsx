@@ -179,6 +179,16 @@ export function NcReportDialog({ open, onOpenChange, projectName, projectAddress
             </div>
           )}
 
+          {/* Municipality */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Município da Obra</Label>
+            <Input
+              placeholder="Ex: São Paulo - SP"
+              value={municipality}
+              onChange={(e) => setMunicipality(e.target.value)}
+            />
+          </div>
+
           {/* NC Items */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
