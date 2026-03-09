@@ -63,11 +63,12 @@ export default function Obras() {
         name: form.name,
         description: form.description || null,
         address: form.address || null,
+        municipality: form.municipality || null,
         budget: form.budget ? parseFloat(form.budget) : 0,
         start_date: form.start_date || null,
         expected_end_date: form.expected_end_date || null,
         status: form.status,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
