@@ -358,6 +358,13 @@ export default function DiarioObra() {
         progress={pdfProgress}
       />
 
+      {/* NC Report Dialog */}
+      <NcReportDialog
+        open={showNcReport}
+        onOpenChange={setShowNcReport}
+        projectName={resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra"}
+      />
+
       {/* AI Panel */}
       <AIAnalysisPanel title="Resumo Inteligente do Diário" result={ai.result} isLoading={ai.isLoading} onClose={ai.clear} />
 
