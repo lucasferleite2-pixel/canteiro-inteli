@@ -422,6 +422,7 @@ export async function generateRdoPDF(
 
   const coverInfo: [string, string][] = [
     ["Obra:", projectName],
+    ["Município / UF:", (options as any).municipality || "—"],
     ["Empresa Executora:", companyName || "—"],
     ["Endereço:", companyAddress || "—"],
     ["Período:", period],
