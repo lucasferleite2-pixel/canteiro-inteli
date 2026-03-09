@@ -206,7 +206,7 @@ export default function DiarioObra() {
         await generateRdoPDF(
           {
             projectName: resolvedProjects.find((p) => p.id === selectedProject)?.name || "Obra",
-            municipality: (resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || undefined,
+            municipality: (resolvedProjects.find((p) => p.id === selectedProject) as any)?.municipality || (resolvedProjects.find((p) => p.id === selectedProject) as any)?.address || undefined,
             companyName: pdfFilters.companyName || undefined,
             companyAddress: pdfFilters.companyAddress || undefined,
             companyPhone: pdfFilters.companyPhone || undefined,
