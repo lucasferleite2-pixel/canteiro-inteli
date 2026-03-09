@@ -32,6 +32,7 @@ export default function DiarioObra() {
   const [editingRdo, setEditingRdo] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showPdfFilter, setShowPdfFilter] = useState(false);
+  const [showNcReport, setShowNcReport] = useState(false);
   const [filters, setFilters] = useState<RdoFilterValues>(defaultFilters);
   const ai = useAIAnalysis();
 
