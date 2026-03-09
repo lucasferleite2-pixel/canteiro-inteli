@@ -315,6 +315,7 @@ export async function generateNaoConformidadePDF(
 
   const coverInfo: [string, string][] = [
     ["Obra:", projectName],
+    ["Município / UF:", municipality || "—"],
     ["Empresa:", companyName || "—"],
     ["Endereço:", companyAddress || "—"],
     ["Responsável Técnico:", technicalResponsible || "—"],
