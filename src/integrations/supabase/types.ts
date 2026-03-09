@@ -136,6 +136,7 @@ export type Database = {
           address: string | null
           brand_color: string | null
           cnpj: string | null
+          crea_cau: string | null
           created_at: string
           id: string
           logo_url: string | null
@@ -149,6 +150,7 @@ export type Database = {
           address?: string | null
           brand_color?: string | null
           cnpj?: string | null
+          crea_cau?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -162,6 +164,7 @@ export type Database = {
           address?: string | null
           brand_color?: string | null
           cnpj?: string | null
+          crea_cau?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null

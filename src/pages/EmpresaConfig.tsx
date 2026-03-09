@@ -22,6 +22,7 @@ export default function EmpresaConfig() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [technicalResponsible, setTechnicalResponsible] = useState("");
+  const [creaCau, setCreaCau] = useState("");
   const [brandColor, setBrandColor] = useState("#1E40AF");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [cnpjError, setCnpjError] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export default function EmpresaConfig() {
         setAddress(data.address || "");
         setPhone(data.phone || "");
         setTechnicalResponsible(data.technical_responsible || "");
+        setCreaCau(data.crea_cau || "");
         setBrandColor(data.brand_color || "#1E40AF");
         setLogoUrl(data.logo_url || null);
       }
@@ -112,6 +114,7 @@ export default function EmpresaConfig() {
         address: address.trim() || null,
         phone: phone.trim() || null,
         technical_responsible: technicalResponsible.trim() || null,
+        crea_cau: creaCau.trim() || null,
         brand_color: brandColor,
       })
       .eq("id", companyId);
@@ -225,8 +228,12 @@ export default function EmpresaConfig() {
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" maxLength={20} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tech">Responsável Técnico (CREA/CAU)</Label>
-                <Input id="tech" value={technicalResponsible} onChange={(e) => setTechnicalResponsible(e.target.value)} placeholder="Eng. João – CREA 12345" maxLength={200} />
+                <Label htmlFor="tech">Responsável Técnico</Label>
+                <Input id="tech" value={technicalResponsible} onChange={(e) => setTechnicalResponsible(e.target.value)} placeholder="Eng. João da Silva" maxLength={200} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crea-cau">CREA / CAU</Label>
+                <Input id="crea-cau" value={creaCau} onChange={(e) => setCreaCau(e.target.value)} placeholder="CREA-SP 123456 / CAU A12345-6" maxLength={100} />
               </div>
             </div>
 
