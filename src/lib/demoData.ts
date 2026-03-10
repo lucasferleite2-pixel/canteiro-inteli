@@ -56,23 +56,23 @@ export const DEMO_RDO_ENTRIES = [
 
 export const DEMO_ATIVIDADES = [
   // rdo1 – Residencial Parque Verde 01/03
-  { id: "atv1", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Concretagem laje 3º pavimento — bloco A", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T08:00:00Z" },
-  { id: "atv2", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Instalação elétrica — prumadas do 2º pavimento", tipo_atividade: "Execução", impacto_cronograma: "leve", concluida: true, created_at: "2026-03-01T09:00:00Z" },
-  { id: "atv3", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Recebimento de aço CA-50 (12 ton)", tipo_atividade: "Logística", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T10:00:00Z" },
+  { id: "atv1", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", hora: "07:30", descricao: "Concretagem laje 3º pavimento — bloco A", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T08:00:00Z" },
+  { id: "atv2", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", hora: "09:15", descricao: "Instalação elétrica — prumadas do 2º pavimento", tipo_atividade: "Execução", impacto_cronograma: "leve", concluida: true, created_at: "2026-03-01T09:00:00Z" },
+  { id: "atv3", rdo_dia_id: "rdo1", company_id: "00000000-0000-0000-0000-000000000000", hora: "14:20", descricao: "Recebimento de aço CA-50 (12 ton)", tipo_atividade: "Logística", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T10:00:00Z" },
   // rdo2 – Residencial Parque Verde 28/02
-  { id: "atv4", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Montagem de formas 3º pavimento — bloco B", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-02-28T08:00:00Z" },
-  { id: "atv5", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Conferência topográfica de níveis", tipo_atividade: "Fiscalização", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-02-28T10:00:00Z" },
+  { id: "atv4", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", hora: "07:00", descricao: "Montagem de formas 3º pavimento — bloco B", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-02-28T08:00:00Z" },
+  { id: "atv5", rdo_dia_id: "rdo2", company_id: "00000000-0000-0000-0000-000000000000", hora: "10:30", descricao: "Conferência topográfica de níveis", tipo_atividade: "Fiscalização", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-02-28T10:00:00Z" },
   // rdo3 – Residencial Parque Verde 27/02 (chuvoso)
-  { id: "atv6", rdo_dia_id: "rdo3", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Limpeza e drenagem da área de fundação", tipo_atividade: "Logística", impacto_cronograma: "médio", concluida: false, created_at: "2026-02-27T11:00:00Z" },
+  { id: "atv6", rdo_dia_id: "rdo3", company_id: "00000000-0000-0000-0000-000000000000", hora: "11:00", descricao: "Limpeza e drenagem da área de fundação", tipo_atividade: "Logística", impacto_cronograma: "médio", concluida: false, created_at: "2026-02-27T11:00:00Z" },
   // rdo4 – Ed. Comercial Centro 02/03
-  { id: "atv7", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Escavação de estacas — eixo D", tipo_atividade: "Execução", impacto_cronograma: "leve", concluida: false, created_at: "2026-03-02T08:00:00Z" },
-  { id: "atv8", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Sondagem complementar — presença de rocha", tipo_atividade: "Planejamento", impacto_cronograma: "crítico", concluida: true, created_at: "2026-03-02T10:00:00Z" },
+  { id: "atv7", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", hora: "07:45", descricao: "Escavação de estacas — eixo D", tipo_atividade: "Execução", impacto_cronograma: "leve", concluida: false, created_at: "2026-03-02T08:00:00Z" },
+  { id: "atv8", rdo_dia_id: "rdo4", company_id: "00000000-0000-0000-0000-000000000000", hora: "10:00", descricao: "Sondagem complementar — presença de rocha", tipo_atividade: "Planejamento", impacto_cronograma: "crítico", concluida: true, created_at: "2026-03-02T10:00:00Z" },
   // rdo5 – Ponte BR-040 28/02
-  { id: "atv9", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Bombeamento de água na cava de fundação", tipo_atividade: "Logística", impacto_cronograma: "crítico", concluida: true, created_at: "2026-02-28T07:00:00Z" },
-  { id: "atv10", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Concretagem do bloco de ancoragem — eixo 1", tipo_atividade: "Execução", impacto_cronograma: "médio", concluida: false, created_at: "2026-02-28T09:00:00Z" },
+  { id: "atv9", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", hora: "06:50", descricao: "Bombeamento de água na cava de fundação", tipo_atividade: "Logística", impacto_cronograma: "crítico", concluida: true, created_at: "2026-02-28T07:00:00Z" },
+  { id: "atv10", rdo_dia_id: "rdo5", company_id: "00000000-0000-0000-0000-000000000000", hora: "09:30", descricao: "Concretagem do bloco de ancoragem — eixo 1", tipo_atividade: "Execução", impacto_cronograma: "médio", concluida: false, created_at: "2026-02-28T09:00:00Z" },
   // rdo6 – Escola Ipê 01/03
-  { id: "atv11", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Alvenaria salas 9 a 12 — conclusão", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T08:00:00Z" },
-  { id: "atv12", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", descricao: "Início da estrutura metálica da cobertura da quadra", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: false, created_at: "2026-03-01T13:00:00Z" },
+  { id: "atv11", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", hora: "08:00", descricao: "Alvenaria salas 9 a 12 — conclusão", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: true, created_at: "2026-03-01T08:00:00Z" },
+  { id: "atv12", rdo_dia_id: "rdo6", company_id: "00000000-0000-0000-0000-000000000000", hora: "13:15", descricao: "Início da estrutura metálica da cobertura da quadra", tipo_atividade: "Execução", impacto_cronograma: "nenhum", concluida: false, created_at: "2026-03-01T13:00:00Z" },
 ];
 
 export const DEMO_MATERIAIS = [

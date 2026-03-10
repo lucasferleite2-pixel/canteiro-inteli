@@ -693,12 +693,16 @@ export async function generateRdoPDF(
         doc.text("Atividades executadas:", ML, y);
         y += 5;
 
-        for (const a of atividades) {
+        // Sort activities by hora for chronological PDF output
+        const sortedAtiv = [...atividades].sort((a: any, b: any) => (a.hora || "99:99").localeCompare(b.hora || "99:99"));
+
+        for (const a of sortedAtiv) {
           y = ensureSpace(doc, y, 8);
           doc.setFontSize(9);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-          const bullet = `- ${sanitizeText(a.descricao)}`;
+          const timePrefix = a.hora ? `${a.hora} - ` : "";
+          const bullet = `${timePrefix}${sanitizeText(a.descricao)}`;
           const lines = doc.splitTextToSize(bullet, contentW - 5);
           doc.text(lines, ML + 3, y);
           y += lines.length * 4.2;
