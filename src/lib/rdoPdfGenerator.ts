@@ -115,6 +115,7 @@ export interface RdoPdfOptions {
   includeOccurrences?: boolean;
   includeMaterials?: boolean;
   includeDespesas?: boolean;
+  includeSideStamp?: boolean;
 }
 
 // ── Fetch sub-data ──
