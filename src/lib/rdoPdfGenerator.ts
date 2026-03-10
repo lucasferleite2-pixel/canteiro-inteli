@@ -749,7 +749,8 @@ export async function generateRdoPDF(
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(BC[0], BC[1], BC[2]);
-        doc.text(fmtDate(rdo.data), ML, y);
+        const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
+        doc.text(`${rdoNumLabel}${fmtDate(rdo.data)}`, ML, y);
         y += 6;
 
         for (const o of ocorrencias) {
