@@ -120,7 +120,7 @@ export interface RdoPdfOptions {
 
 // ── Fetch sub-data ──
 async function fetchAtividades(rdoDiaId: string) {
-  const { data } = await supabase.from("rdo_atividade").select("*").eq("rdo_dia_id", rdoDiaId).order("created_at");
+  const { data } = await supabase.from("rdo_atividade").select("*").eq("rdo_dia_id", rdoDiaId).order("hora", { ascending: true, nullsFirst: false });
   return data || [];
 }
 async function fetchMateriais(rdoDiaId: string) {
