@@ -95,6 +95,7 @@ export interface RdoDia {
   risco_dia: string | null;
   observacoes_gerais: string | null;
   is_locked: boolean;
+  numero_sequencial?: number;
 }
 
 export interface RdoPdfOptions {
