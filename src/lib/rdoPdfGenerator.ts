@@ -530,20 +530,22 @@ export async function generateRdoPDF(
   doc.text("Autenticidade", coverRight - 16, qrY + 20, { align: "center" });
 
   // ── Side stamp (carimbo lateral de status) ──
-  doc.saveGraphicsState();
-  doc.setGState(new (doc as any).GState({ opacity: 0.12 }));
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(BC[0], BC[1], BC[2]);
-  const stampLines = [
-    "RELATORIO TECNICO",
-    "DOCUMENTO OFICIAL",
-    `RDO ${sorted.length > 0 ? `No ${String(sorted.length).padStart(3, "0")}/${format(now, "yyyy")}` : ""}`,
-  ];
-  stampLines.forEach((line, i) => {
-    doc.text(line, 8, pageH / 2 - 10 + i * 5, { angle: 90 });
-  });
-  doc.restoreGraphicsState();
+  if (includeSideStamp) {
+    doc.saveGraphicsState();
+    doc.setGState(new (doc as any).GState({ opacity: 0.12 }));
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(BC[0], BC[1], BC[2]);
+    const stampLines = [
+      "RELATORIO TECNICO",
+      "DOCUMENTO OFICIAL",
+      `RDO ${sorted.length > 0 ? `No ${String(sorted.length).padStart(3, "0")}/${format(now, "yyyy")}` : ""}`,
+    ];
+    stampLines.forEach((line, i) => {
+      doc.text(line, 8, pageH / 2 - 10 + i * 5, { angle: 90 });
+    });
+    doc.restoreGraphicsState();
+  }
 
   // ── Bloco 4: Assinatura Técnica na Capa ──
   const sigBlockY = Math.max(tableEndY + 14, safeBottom - 50);
