@@ -1,0 +1,1 @@
+ALTER TABLE public.rdo_atividade ADD COLUMN hora text;
