@@ -64,6 +64,7 @@ interface RdoDia {
   is_locked: boolean;
   quantidade_executada?: number;
   unidade_medicao?: string;
+  numero_sequencial?: number;
 }
 
 interface Props {
