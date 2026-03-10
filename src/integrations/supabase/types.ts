@@ -701,6 +701,7 @@ export type Database = {
           created_at: string
           descricao: string
           etapa_planejamento_id: string | null
+          hora: string | null
           id: string
           impacto_cronograma: string | null
           rdo_dia_id: string
@@ -713,6 +714,7 @@ export type Database = {
           created_at?: string
           descricao: string
           etapa_planejamento_id?: string | null
+          hora?: string | null
           id?: string
           impacto_cronograma?: string | null
           rdo_dia_id: string
@@ -725,6 +727,7 @@ export type Database = {
           created_at?: string
           descricao?: string
           etapa_planejamento_id?: string | null
+          hora?: string | null
           id?: string
           impacto_cronograma?: string | null
           rdo_dia_id?: string
