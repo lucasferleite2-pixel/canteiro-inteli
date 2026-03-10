@@ -317,6 +317,7 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
             <ToggleRow label="Ocorrências" checked={filters.includeOccurrences} onChange={(v) => update({ includeOccurrences: v })} />
             <ToggleRow label="Materiais" checked={filters.includeMaterials} onChange={(v) => update({ includeMaterials: v })} />
             <ToggleRow label="Despesas" checked={filters.includeDespesas} onChange={(v) => update({ includeDespesas: v })} />
+            <ToggleRow label="Carimbo Lateral de Status" checked={filters.includeSideStamp} onChange={(v) => update({ includeSideStamp: v })} />
             <ToggleRow label="Comentários Técnicos" checked={filters.includeTechnicalComments} onChange={(v) => update({ includeTechnicalComments: v })} />
           </div>
         </div>
