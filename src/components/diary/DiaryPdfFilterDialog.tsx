@@ -25,6 +25,7 @@ export interface PdfFilters {
   includeOccurrences: boolean;
   includeMaterials: boolean;
   includeDespesas: boolean;
+  includeSideStamp: boolean;
   includeTechnicalComments: boolean;
   includeLogo: boolean;
   logoBase64: string | null;
