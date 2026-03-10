@@ -1310,15 +1310,18 @@ export async function generateRdoPDF(
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
 
-    if (i > 1 && companyName) {
-      addWatermark(doc, companyName);
-    }
+    // Logo watermark on ALL pages (behind content, low opacity)
+    addLogoWatermark(doc, logoBase64 || null);
 
+    // Header only on pages after cover (page 1 = cover, no header)
     if (i > 1) {
       addInstitutionalHeader(doc, projectName, companyName, technicalResponsible, logoBase64, BC);
     }
 
-    addInstitutionalFooter(doc, i, totalPages, reportId, shortHash, companyName, generatedAt);
+    // Footer on all pages (cover has its own footer already but standard on rest)
+    if (i > 1) {
+      addInstitutionalFooter(doc, i, totalPages, reportId, shortHash, companyName, generatedAt);
+    }
   }
 
   const fileName = `Laudo-Tecnico-${projectName.replace(/\s+/g, "-").toLowerCase()}-${format(now, "yyyy-MM-dd")}.pdf`;
