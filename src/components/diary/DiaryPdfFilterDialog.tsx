@@ -107,6 +107,7 @@ export function DiaryPdfFilterDialog({ open, onOpenChange, contracts, onGenerate
     includeOccurrences: true,
     includeMaterials: true,
     includeDespesas: true,
+    includeSideStamp: true,
     includeTechnicalComments: true,
     includeLogo: true,
     logoBase64: null,
