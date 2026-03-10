@@ -370,7 +370,7 @@ export async function generateRdoPDF(
     projectName, companyName, companyAddress, companyPhone, technicalResponsible,
     rdos, userName, aiSummary, logoBase64, brandColor,
     includePhotos = true, includeActivities = true, includeOccurrences = true,
-    includeMaterials = true, includeDespesas = true,
+    includeMaterials = true, includeDespesas = true, includeSideStamp = true,
   } = options;
 
   const BC: [number, number, number] = brandColor ? hexToRgb(brandColor) : BLUE_TECH;
