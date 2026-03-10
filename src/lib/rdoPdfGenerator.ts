@@ -225,15 +225,18 @@ function drawGauge(
 
 // ── Helpers ──
 
-function addWatermark(doc: jsPDF, text: string) {
+function addLogoWatermark(doc: jsPDF, logoBase64: string | null) {
+  if (!logoBase64) return;
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   doc.saveGraphicsState();
-  doc.setGState(new (doc as any).GState({ opacity: 0.06 }));
-  doc.setFontSize(50);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(BLUE_TECH[0], BLUE_TECH[1], BLUE_TECH[2]);
-  doc.text(sanitizeText(text.toUpperCase()), pageW / 2, pageH / 2, { align: "center", angle: 45 });
+  doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
+  // 60% scale centered — logo at ~126x63mm centered on A4
+  const wmW = pageW * 0.6;
+  const wmH = wmW * 0.5;
+  const wmX = (pageW - wmW) / 2;
+  const wmY = (pageH - wmH) / 2;
+  try { doc.addImage(logoBase64, "PNG", wmX, wmY, wmW, wmH); } catch {}
   doc.restoreGraphicsState();
 }
 
