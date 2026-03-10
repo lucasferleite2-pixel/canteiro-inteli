@@ -95,6 +95,7 @@ export interface RdoDia {
   risco_dia: string | null;
   observacoes_gerais: string | null;
   is_locked: boolean;
+  numero_sequencial?: number;
 }
 
 export interface RdoPdfOptions {
@@ -672,7 +673,8 @@ export async function generateRdoPDF(
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(BC[0], BC[1], BC[2]);
-        doc.text(sanitizeText(`${fmtDate(rdo.data)} - ${rdo.fase_obra || "Fase nao informada"}`), ML, y);
+        const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
+        doc.text(sanitizeText(`${rdoNumLabel}${fmtDate(rdo.data)} - ${rdo.fase_obra || "Fase nao informada"}`), ML, y);
         y += 2;
 
         doc.setFontSize(7);
@@ -747,7 +749,8 @@ export async function generateRdoPDF(
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(BC[0], BC[1], BC[2]);
-        doc.text(fmtDate(rdo.data), ML, y);
+        const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
+        doc.text(`${rdoNumLabel}${fmtDate(rdo.data)}`, ML, y);
         y += 6;
 
         for (const o of ocorrencias) {
@@ -806,7 +809,8 @@ export async function generateRdoPDF(
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(BC[0], BC[1], BC[2]);
-      doc.text(fmtDateShort(rdo.data), ML, y);
+      const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
+      doc.text(`${rdoNumLabel}${fmtDateShort(rdo.data)}`, ML, y);
       y += 2;
 
       autoTable(doc, {
@@ -867,7 +871,8 @@ export async function generateRdoPDF(
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(BC[0], BC[1], BC[2]);
-        doc.text(fmtDate(rdo.data), ML, y);
+        const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
+        doc.text(`${rdoNumLabel}${fmtDate(rdo.data)}`, ML, y);
         y += 8;
 
         // Process photos 2 per row

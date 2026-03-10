@@ -64,6 +64,7 @@ interface RdoDia {
   is_locked: boolean;
   quantidade_executada?: number;
   unidade_medicao?: string;
+  numero_sequencial?: number;
 }
 
 interface Props {
@@ -124,6 +125,11 @@ export function RdoSmartCard({ rdo, companyId, canModify, isAuthor, onEdit, onDe
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5">
                   {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                  {rdo.numero_sequencial && (
+                    <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary">
+                      RDO {String(rdo.numero_sequencial).padStart(3, "0")}
+                    </Badge>
+                  )}
                   <span className="font-semibold text-sm">{formattedDate}</span>
                 </div>
                 {rdo.is_locked && (

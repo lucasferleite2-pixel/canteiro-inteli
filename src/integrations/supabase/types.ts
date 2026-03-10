@@ -882,6 +882,7 @@ export type Database = {
           horas_trabalhadas: number | null
           id: string
           is_locked: boolean | null
+          numero_sequencial: number | null
           obra_id: string
           observacoes_gerais: string | null
           percentual_fisico_acumulado: number | null
@@ -906,6 +907,7 @@ export type Database = {
           horas_trabalhadas?: number | null
           id?: string
           is_locked?: boolean | null
+          numero_sequencial?: number | null
           obra_id: string
           observacoes_gerais?: string | null
           percentual_fisico_acumulado?: number | null
@@ -930,6 +932,7 @@ export type Database = {
           horas_trabalhadas?: number | null
           id?: string
           is_locked?: boolean | null
+          numero_sequencial?: number | null
           obra_id?: string
           observacoes_gerais?: string | null
           percentual_fisico_acumulado?: number | null
