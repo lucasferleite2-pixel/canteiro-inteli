@@ -225,15 +225,18 @@ function drawGauge(
 
 // ── Helpers ──
 
-function addWatermark(doc: jsPDF, text: string) {
+function addLogoWatermark(doc: jsPDF, logoBase64: string | null) {
+  if (!logoBase64) return;
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   doc.saveGraphicsState();
-  doc.setGState(new (doc as any).GState({ opacity: 0.06 }));
-  doc.setFontSize(50);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(BLUE_TECH[0], BLUE_TECH[1], BLUE_TECH[2]);
-  doc.text(sanitizeText(text.toUpperCase()), pageW / 2, pageH / 2, { align: "center", angle: 45 });
+  doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
+  // 60% scale centered — logo at ~126x63mm centered on A4
+  const wmW = pageW * 0.6;
+  const wmH = wmW * 0.5;
+  const wmX = (pageW - wmW) / 2;
+  const wmY = (pageH - wmH) / 2;
+  try { doc.addImage(logoBase64, "PNG", wmX, wmY, wmW, wmH); } catch {}
   doc.restoreGraphicsState();
 }
 
@@ -430,41 +433,64 @@ export async function generateRdoPDF(
   const hasAnyPhoto = includePhotos && sorted.some((r) => (allFotos[r.id] || []).length > 0);
 
   // ══════════════════════════════════════════
-  // 1. CAPA INSTITUCIONAL
+  // 1. CAPA INSTITUCIONAL (grid vertical - 4 blocos)
   // ══════════════════════════════════════════
   onProgress?.("Gerando capa institucional...");
 
+  const coverCenterX = pageW / 2;
+  const coverMaxW = Math.min(140, contentW); // ~520px equivalent at 72dpi
+  const coverLeft = (pageW - coverMaxW) / 2;
+  const coverRight = coverLeft + coverMaxW;
+  const safeTop = 30; // safe-area-top ~120px
+  const safeBottom = pageH - 30; // safe-area-bottom ~120px
+
+  // ── Bloco 1: Logo Institucional + Nome da Empresa ──
   doc.setFillColor(BC[0], BC[1], BC[2]);
-  doc.rect(0, 0, pageW, 50, "F");
+  doc.rect(0, 0, pageW, 3, "F"); // thin top accent line
+
+  let coverY = safeTop + 10;
 
   if (logoBase64) {
-    try { doc.addImage(logoBase64, "PNG", (pageW - 40) / 2, 8, 40, 20); } catch {}
+    try { doc.addImage(logoBase64, "PNG", (pageW - 44) / 2, coverY, 44, 22); } catch {}
+    coverY += 28;
   }
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(255, 255, 255);
-  doc.text("DIARIO TECNICO DE EXECUCAO", pageW / 2, 38, { align: "center" });
-  doc.setFontSize(7);
-  doc.text(sanitizeText(companyName || ""), pageW / 2, 44, { align: "center" });
+  if (companyName) {
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(BC[0], BC[1], BC[2]);
+    const companyLines = doc.splitTextToSize(sanitizeText(companyName.toUpperCase()), coverMaxW);
+    doc.text(companyLines, coverCenterX, coverY, { align: "center" });
+    coverY += companyLines.length * 5.5 + 4;
+  }
 
-  doc.setFontSize(22);
+  // ── Bloco 2: Título do Documento ──
+  coverY += 12;
+  doc.setDrawColor(BC[0], BC[1], BC[2]);
+  doc.setLineWidth(0.8);
+  doc.line(coverLeft, coverY, coverRight, coverY);
+  coverY += 10;
+
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BC[0], BC[1], BC[2]);
-  doc.text("RELATORIO TECNICO DE", pageW / 2, 72, { align: "center" });
-  doc.text("ACOMPANHAMENTO DE OBRA", pageW / 2, 82, { align: "center" });
+  doc.text("RELATORIO TECNICO DE", coverCenterX, coverY, { align: "center" });
+  coverY += 8;
+  doc.text("ACOMPANHAMENTO DE OBRA", coverCenterX, coverY, { align: "center" });
+  coverY += 10;
 
-  doc.setDrawColor(BC[0], BC[1], BC[2]);
-  doc.setLineWidth(1);
-  doc.line(60, 90, pageW - 60, 90);
-
-  const infoStartY = 100;
-  doc.setFillColor(GRAY_LIGHT[0], GRAY_LIGHT[1], GRAY_LIGHT[2]);
-  doc.roundedRect(30, infoStartY, pageW - 60, 78, 2, 2, "F");
-
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+  doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+  doc.text("Diario de Execucao / Laudo Tecnico", coverCenterX, coverY, { align: "center" });
+  coverY += 6;
+
+  doc.setLineWidth(0.8);
+  doc.setDrawColor(BC[0], BC[1], BC[2]);
+  doc.line(coverLeft, coverY, coverRight, coverY);
+
+  // ── Bloco 3: Identificação do Documento (tabela técnica) ──
+  coverY += 14;
 
   const coverInfo: [string, string][] = [
     ["Obra:", sanitizeText(projectName)],
@@ -473,31 +499,75 @@ export async function generateRdoPDF(
     ["Endereco:", sanitizeText(companyAddress || "---")],
     ["Periodo:", period],
     ["Data do Relatorio:", generatedAt],
-    ["Responsavel Tecnico:", sanitizeText(technicalResponsible || "---")],
+    ["Resp. Tecnico:", sanitizeText(technicalResponsible || "---")],
     ["CREA / CAU:", sanitizeText(creaCau || "---")],
     ["No do Documento:", reportId],
   ];
 
-  coverInfo.forEach(([label, value], i) => {
-    const ly = infoStartY + 10 + i * 7.5;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text(label, 38, ly);
-    doc.setFont("helvetica", "normal");
-    doc.text(value, 90, ly);
+  // Use autoTable for structured cover info (prevents overflow)
+  autoTable(doc, {
+    startY: coverY,
+    body: coverInfo.map(([label, value]) => [label, value]),
+    theme: "plain",
+    styles: { fontSize: 9, cellPadding: { top: 2, bottom: 2, left: 4, right: 4 }, overflow: "linebreak" },
+    columnStyles: {
+      0: { fontStyle: "bold", cellWidth: 42, textColor: [BC[0], BC[1], BC[2]] },
+      1: { cellWidth: coverMaxW - 42 - 34, textColor: [DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]] },
+    },
+    margin: { left: coverLeft, right: pageW - coverRight },
+    tableWidth: coverMaxW - 34,
+    didDrawPage: () => {},
   });
 
-  doc.addImage(qrDataUrl, "PNG", pageW - 70, infoStartY + 35, 28, 28);
+  // QR code to the right of the table
+  const tableEndY = (doc as any).lastAutoTable?.finalY || coverY + 60;
+  const qrY = Math.max(coverY + 5, tableEndY - 35);
+  doc.addImage(qrDataUrl, "PNG", coverRight - 30, qrY - 10, 28, 28);
   doc.setFontSize(6);
   doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-  doc.text("Autenticidade", pageW - 56, infoStartY + 67, { align: "center" });
+  doc.text("Autenticidade", coverRight - 16, qrY + 20, { align: "center" });
 
+  // ── Side stamp (carimbo lateral de status) ──
+  doc.saveGraphicsState();
+  doc.setGState(new (doc as any).GState({ opacity: 0.12 }));
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(BC[0], BC[1], BC[2]);
+  const stampLines = [
+    "RELATORIO TECNICO",
+    "DOCUMENTO OFICIAL",
+    `RDO ${sorted.length > 0 ? `No ${String(sorted.length).padStart(3, "0")}/${format(now, "yyyy")}` : ""}`,
+  ];
+  stampLines.forEach((line, i) => {
+    doc.text(line, 8, pageH / 2 - 10 + i * 5, { angle: 90 });
+  });
+  doc.restoreGraphicsState();
+
+  // ── Bloco 4: Assinatura Técnica na Capa ──
+  const sigBlockY = Math.max(tableEndY + 14, safeBottom - 50);
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(coverLeft + 20, sigBlockY, coverRight - 20, sigBlockY);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+  doc.text("Responsavel Tecnico", coverCenterX, sigBlockY + 6, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+  if (technicalResponsible) {
+    doc.text(sanitizeText(technicalResponsible), coverCenterX, sigBlockY + 11, { align: "center" });
+  }
+  doc.text(`CREA / CAU: ${creaCau || "_______________"}`, coverCenterX, sigBlockY + 16, { align: "center" });
+
+  // ── Footer da Capa ──
   doc.setFillColor(BC[0], BC[1], BC[2]);
-  doc.rect(0, pageH - 20, pageW, 20, "F");
-  doc.setFontSize(7);
+  doc.rect(0, pageH - 16, pageW, 16, "F");
+  doc.setFontSize(6.5);
   doc.setTextColor(255, 255, 255);
-  doc.text(`Hash de Integridade (SHA-256): ${shortHash}`, pageW / 2, pageH - 12, { align: "center" });
-  doc.text("Documento gerado automaticamente pelo ERP Canteiro Inteli", pageW / 2, pageH - 6, { align: "center" });
+  doc.text(`Hash de Integridade (SHA-256): ${shortHash}`, coverCenterX, pageH - 9, { align: "center" });
+  doc.text("Documento gerado automaticamente pelo ERP Canteiro Inteli", coverCenterX, pageH - 4, { align: "center" });
 
   // ══════════════════════════════════════════
   // SUMARIO (placeholder, filled at end)
@@ -1240,15 +1310,18 @@ export async function generateRdoPDF(
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
 
-    if (i > 1 && companyName) {
-      addWatermark(doc, companyName);
-    }
+    // Logo watermark on ALL pages (behind content, low opacity)
+    addLogoWatermark(doc, logoBase64 || null);
 
+    // Header only on pages after cover (page 1 = cover, no header)
     if (i > 1) {
       addInstitutionalHeader(doc, projectName, companyName, technicalResponsible, logoBase64, BC);
     }
 
-    addInstitutionalFooter(doc, i, totalPages, reportId, shortHash, companyName, generatedAt);
+    // Footer on all pages (cover has its own footer already but standard on rest)
+    if (i > 1) {
+      addInstitutionalFooter(doc, i, totalPages, reportId, shortHash, companyName, generatedAt);
+    }
   }
 
   const fileName = `Laudo-Tecnico-${projectName.replace(/\s+/g, "-").toLowerCase()}-${format(now, "yyyy-MM-dd")}.pdf`;
