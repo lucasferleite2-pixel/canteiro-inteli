@@ -808,7 +808,8 @@ export async function generateRdoPDF(
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(BC[0], BC[1], BC[2]);
-      doc.text(fmtDateShort(rdo.data), ML, y);
+      const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
+      doc.text(`${rdoNumLabel}${fmtDateShort(rdo.data)}`, ML, y);
       y += 2;
 
       autoTable(doc, {
