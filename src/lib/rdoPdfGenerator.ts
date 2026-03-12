@@ -428,11 +428,7 @@ export async function generateRdoPDF(
     allFotos[rdo.id] = fotos;
   }
 
-  // Determine which conditional sections will appear
-  const hasAnyAtividade = includeActivities && sorted.some((r) => (allAtividades[r.id] || []).length > 0);
-  const hasAnyOcorrencia = includeOccurrences && sorted.some((r) => (allOcorrencias[r.id] || []).length > 0);
-  const hasAnyDespesaPdf = includeDespesas && sorted.some((r) => (allDespesas[r.id] || []).filter((d: any) => d.incluir_no_pdf).length > 0);
-  const hasAnyPhoto = includePhotos && sorted.some((r) => (allFotos[r.id] || []).length > 0);
+  // Content is now grouped by daily blocks (no global section flags needed)
 
   // ══════════════════════════════════════════
   // 1. CAPA INSTITUCIONAL (grid vertical - 4 blocos)
@@ -652,52 +648,72 @@ export async function generateRdoPDF(
   );
 
   // ══════════════════════════════════════════
-  // DESCRICAO DAS ATIVIDADES EXECUTADAS (conditional)
+  // BLOCOS DIARIOS (agrupado por dia)
   // ══════════════════════════════════════════
-  if (includeActivities) {
-    onProgress?.("Gerando descricao das atividades...");
+  const tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mao de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
+  let figureNum = 1;
+  let totalGeralDespesas = 0;
+  const dayBookmarks: { title: string; page: number }[] = [];
+
+  for (let dayIdx = 0; dayIdx < sorted.length; dayIdx++) {
+    const rdo = sorted[dayIdx];
+    const atividades = allAtividades[rdo.id] || [];
+    const ocorrencias = allOcorrencias[rdo.id] || [];
+    const despesas = includeDespesas ? (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf) : [];
+    const fotos = allFotos[rdo.id] || [];
+
+    const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")}` : `RDO ${String(dayIdx + 1).padStart(3, "0")}`;
+    const dayTitle = `${rdoNumLabel} - ${fmtDate(rdo.data)} - ${rdo.fase_obra || "Fase nao informada"}`;
+
+    onProgress?.(`Gerando bloco diario ${dayIdx + 1}/${sorted.length}...`);
+
+    // Start each day on a new page
     doc.addPage();
-    const secAtiv = nextSec();
-    const secAtivTitle = `${secAtiv}. DESCRICAO DAS ATIVIDADES EXECUTADAS`;
-    trackSection(secAtivTitle);
-    y = addSectionTitle(doc, secAtivTitle, HEADER_H + 4, BC);
+    const daySec = nextSec();
+    const daySectionTitle = `${daySec}. ${dayTitle}`;
+    trackSection(daySectionTitle);
+    dayBookmarks.push({ title: daySectionTitle, page: doc.getNumberOfPages() });
+    y = addSectionTitle(doc, daySectionTitle, HEADER_H + 4, BC);
 
-    if (!hasAnyAtividade) {
-      y = addBodyText(doc, "Nao foram registradas atividades detalhadas no periodo analisado.", y);
-    } else {
-      for (let idx = 0; idx < sorted.length; idx++) {
-        const rdo = sorted[idx];
-        const atividades = allAtividades[rdo.id] || [];
-        if (atividades.length === 0) continue;
+    // ── RESUMO DO DIA ──
+    const summaryData: [string, string][] = [
+      ["Clima", rdo.clima || "Nao informado"],
+      ["Equipe Total", `${rdo.equipe_total} pessoa(s)`],
+      ["Horas Trabalhadas", `${rdo.horas_trabalhadas || 0}h`],
+      ["Risco do Dia", (rdo.risco_dia || "baixo").toUpperCase()],
+      ["Custo do Dia", rdo.custo_dia ? `R$ ${Number(rdo.custo_dia).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Nao informado"],
+      ["Produtividade", rdo.produtividade_percentual ? `${rdo.produtividade_percentual}%` : "Nao informado"],
+      ["Avanco Fisico do Dia", rdo.percentual_fisico_dia ? `${rdo.percentual_fisico_dia}%` : "Nao informado"],
+      ["Avanco Fisico Acumulado", rdo.percentual_fisico_acumulado ? `${rdo.percentual_fisico_acumulado}%` : "Nao informado"],
+    ];
 
-        y = ensureSpace(doc, y, 20);
+    autoTable(doc, {
+      startY: y,
+      body: summaryData.map(([label, value]) => [label, value]),
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: "bold", cellWidth: 50, textColor: [BC[0], BC[1], BC[2]] },
+        1: { textColor: [DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]] },
+      },
+      margin: { left: ML, right: MR, top: HEADER_H + 4 },
+    });
+    y = (doc as any).lastAutoTable?.finalY + 6 || y + 40;
 
-        // Date sub-header
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(BC[0], BC[1], BC[2]);
-        const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
-        doc.text(sanitizeText(`${rdoNumLabel}${fmtDate(rdo.data)} - ${rdo.fase_obra || "Fase nao informada"}`), ML, y);
-        y += 2;
+    // ── 1. ATIVIDADES EXECUTADAS DO DIA ──
+    if (includeActivities) {
+      y = ensureSpace(doc, y, 20);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(BC[0], BC[1], BC[2]);
+      doc.text("1. ATIVIDADES EXECUTADAS", ML, y);
+      y += 6;
 
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-        doc.text(`Clima: ${rdo.clima}  |  Equipe: ${rdo.equipe_total}  |  Horas: ${rdo.horas_trabalhadas}h  |  Risco: ${rdo.risco_dia || "baixo"}`, ML, y + 4);
-        y += 8;
-
-        // Subtitle
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-        doc.text("Atividades executadas:", ML, y);
-        y += 5;
-
-        // Sort activities by hora for chronological PDF output
+      if (atividades.length > 0) {
         const sortedAtiv = [...atividades].sort((a: any, b: any) => (a.hora || "99:99").localeCompare(b.hora || "99:99"));
 
         for (const a of sortedAtiv) {
-          y = ensureSpace(doc, y, 8);
+          y = ensureSpace(doc, y, 12);
           doc.setFontSize(9);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
@@ -707,7 +723,6 @@ export async function generateRdoPDF(
           doc.text(lines, ML + 3, y);
           y += lines.length * 4.2;
 
-          // Status indicators (ASCII only)
           doc.setFontSize(7);
           doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
           const statusParts = [
@@ -718,107 +733,60 @@ export async function generateRdoPDF(
           doc.text(statusParts, ML + 6, y);
           y += 5;
         }
-
-        if (rdo.observacoes_gerais) {
-          y = ensureSpace(doc, y, 10);
-          doc.setFontSize(8);
-          doc.setFont("helvetica", "italic");
-          doc.setTextColor(80, 80, 80);
-          const obsLines = doc.splitTextToSize(sanitizeText(`Obs: ${rdo.observacoes_gerais}`), contentW - 10);
-          doc.text(obsLines, ML + 3, y);
-          y += obsLines.length * 3.8 + 4;
-        }
-
-        y += 4;
+      } else {
+        y = addBodyText(doc, "Nenhuma atividade registrada neste dia.", y);
       }
     }
-  }
 
-  // ══════════════════════════════════════════
-  // OCORRENCIAS E FATOS RELEVANTES (conditional)
-  // ══════════════════════════════════════════
-  if (includeOccurrences) {
-    onProgress?.("Gerando ocorrencias...");
-    doc.addPage();
-    const secOcorr = nextSec();
-    const secOcorrTitle = `${secOcorr}. OCORRENCIAS E FATOS RELEVANTES`;
-    trackSection(secOcorrTitle);
-    y = addSectionTitle(doc, secOcorrTitle, HEADER_H + 4, BC);
-
-    if (!hasAnyOcorrencia) {
-      y = addBodyText(doc, "Nao foram registradas ocorrencias relevantes no periodo analisado.", y);
-    } else {
-      for (const rdo of sorted) {
-        const ocorrencias = allOcorrencias[rdo.id] || [];
-        if (ocorrencias.length === 0) continue;
-
-        y = ensureSpace(doc, y, 30);
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(BC[0], BC[1], BC[2]);
-        const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
-        doc.text(`${rdoNumLabel}${fmtDate(rdo.data)}`, ML, y);
-        y += 6;
-
-        for (const o of ocorrencias) {
-          y = ensureSpace(doc, y, 25);
-
-          doc.setFillColor(WARN_BG[0], WARN_BG[1], WARN_BG[2]);
-          doc.setDrawColor(WARN_BORDER[0], WARN_BORDER[1], WARN_BORDER[2]);
-          doc.setLineWidth(0.5);
-
-          const descLines = doc.splitTextToSize(sanitizeText(o.descricao), contentW - 16);
-          const boxH = 14 + descLines.length * 4;
-          doc.roundedRect(ML, y, contentW, boxH, 1, 1, "FD");
-
-          doc.setFontSize(8);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(180, 120, 0);
-          doc.text("[!] OCORRENCIA TECNICA REGISTRADA", ML + 4, y + 5);
-
-          doc.setFontSize(7);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-          const meta = [`Tipo: ${o.tipo_ocorrencia}`, `Impacto: ${o.impacto || "baixo"}`];
-          if (o.responsavel) meta.push(`Responsavel: ${sanitizeText(o.responsavel)}`);
-          if (o.gera_risco_contratual) meta.push("[!] RISCO CONTRATUAL");
-          doc.text(meta.join("  |  "), ML + 4, y + 10);
-
-          doc.setFontSize(9);
-          doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-          doc.text(descLines, ML + 4, y + 16);
-
-          y += boxH + 6;
-        }
-      }
-    }
-  }
-
-  // ══════════════════════════════════════════
-  // DESPESAS DO PERIODO (conditional)
-  // ══════════════════════════════════════════
-  if (includeDespesas && hasAnyDespesaPdf) {
-    onProgress?.("Gerando despesas...");
-    doc.addPage();
-    const secDesp = nextSec();
-    const secDespTitle = `${secDesp}. DESPESAS DO PERIODO`;
-    trackSection(secDespTitle);
-    y = addSectionTitle(doc, secDespTitle, HEADER_H + 4, BC);
-
-    const tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mao de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
-    let totalGeral = 0;
-
-    for (const rdo of sorted) {
-      const despesas = (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf);
-      if (despesas.length === 0) continue;
-
-      y = ensureSpace(doc, y, 20);
-      doc.setFontSize(9);
+    // ── 2. OCORRENCIAS E FATOS RELEVANTES DO DIA ──
+    if (includeOccurrences && ocorrencias.length > 0) {
+      y = ensureSpace(doc, y + 4, 20);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(BC[0], BC[1], BC[2]);
-      const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
-      doc.text(`${rdoNumLabel}${fmtDateShort(rdo.data)}`, ML, y);
-      y += 2;
+      doc.text("2. OCORRENCIAS E FATOS RELEVANTES", ML, y);
+      y += 6;
+
+      for (const o of ocorrencias) {
+        y = ensureSpace(doc, y, 25);
+
+        doc.setFillColor(WARN_BG[0], WARN_BG[1], WARN_BG[2]);
+        doc.setDrawColor(WARN_BORDER[0], WARN_BORDER[1], WARN_BORDER[2]);
+        doc.setLineWidth(0.5);
+
+        const descLines = doc.splitTextToSize(sanitizeText(o.descricao), contentW - 16);
+        const boxH = 14 + descLines.length * 4;
+        doc.roundedRect(ML, y, contentW, boxH, 1, 1, "FD");
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(180, 120, 0);
+        doc.text("[!] OCORRENCIA TECNICA REGISTRADA", ML + 4, y + 5);
+
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+        const meta = [`Tipo: ${o.tipo_ocorrencia}`, `Impacto: ${o.impacto || "baixo"}`];
+        if (o.responsavel) meta.push(`Responsavel: ${sanitizeText(o.responsavel)}`);
+        if (o.gera_risco_contratual) meta.push("[!] RISCO CONTRATUAL");
+        doc.text(meta.join("  |  "), ML + 4, y + 10);
+
+        doc.setFontSize(9);
+        doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+        doc.text(descLines, ML + 4, y + 16);
+
+        y += boxH + 6;
+      }
+    }
+
+    // ── 3. DESPESAS DO DIA ──
+    if (includeDespesas && despesas.length > 0) {
+      y = ensureSpace(doc, y + 4, 20);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(BC[0], BC[1], BC[2]);
+      doc.text("3. DESPESAS DO DIA", ML, y);
+      y += 4;
 
       autoTable(doc, {
         startY: y,
@@ -838,136 +806,149 @@ export async function generateRdoPDF(
       });
       y = (doc as any).lastAutoTable?.finalY + 2 || y + 20;
       const subtotal = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
-      totalGeral += subtotal;
+      totalGeralDespesas += subtotal;
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-      doc.text(`Subtotal: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 2);
+      doc.text(`Subtotal do dia: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 2);
       y += 8;
     }
 
-    y = ensureSpace(doc, y, 10);
+    // ── 4. REGISTRO FOTOGRAFICO COMENTADO DO DIA ──
+    if (includePhotos && fotos.length > 0) {
+      y = ensureSpace(doc, y + 4, 20);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(BC[0], BC[1], BC[2]);
+      doc.text("4. REGISTRO FOTOGRAFICO COMENTADO", ML, y);
+      y += 8;
+
+      for (let fi = 0; fi < fotos.length; fi += 2) {
+        const isGrid = fi + 1 < fotos.length;
+        const photosInRow = isGrid ? [fotos[fi], fotos[fi + 1]] : [fotos[fi]];
+
+        const imgW = isGrid ? (contentW - 6) / 2 : contentW * 0.6;
+        const imgH = imgW * 0.75;
+
+        y = ensureSpace(doc, y, imgH + 55);
+
+        for (let pi = 0; pi < photosInRow.length; pi++) {
+          const foto = photosInRow[pi];
+          const xOffset = isGrid ? ML + pi * (imgW + 6) : ML + (contentW - imgW) / 2;
+
+          onProgress?.(`Carregando foto ${figureNum + pi}...`);
+          const base64 = await loadImageAsBase64(foto.url);
+          if (base64) {
+            try {
+              doc.setDrawColor(180, 180, 180);
+              doc.setLineWidth(0.3);
+              doc.rect(xOffset - 1, y - 1, imgW + 2, imgH + 2);
+              doc.addImage(base64, "JPEG", xOffset, y, imgW, imgH);
+            } catch { /* skip */ }
+          }
+        }
+
+        y += imgH + 4;
+
+        for (let pi = 0; pi < photosInRow.length; pi++) {
+          const foto = photosInRow[pi];
+          const captionX = isGrid ? ML + pi * ((contentW - 6) / 2 + 6) : ML;
+          const captionW = isGrid ? (contentW - 6) / 2 : contentW;
+
+          const caption = buildPhotoCaption(foto, rdo.fase_obra);
+
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+          const figTitle = `Figura ${String(figureNum).padStart(2, "0")} - ${sanitizeText(caption.substring(0, 80))}`;
+          const figLines = doc.splitTextToSize(figTitle, captionW);
+          doc.text(figLines, captionX, y);
+
+          let captionY = y + figLines.length * 3.5 + 1;
+
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+
+          if (foto.data_captura) {
+            doc.text(`Data da captura: ${fmtDateTime(foto.data_captura)}`, captionX, captionY);
+            captionY += 3.5;
+          }
+          if (foto.latitude && foto.longitude) {
+            doc.text(`Local (GPS): ${foto.latitude.toFixed(5)}, ${foto.longitude.toFixed(5)}`, captionX, captionY);
+            captionY += 3.5;
+          }
+          if (foto.fase_obra) {
+            doc.text(`Fase da obra: ${foto.fase_obra}`, captionX, captionY);
+            captionY += 3.5;
+          }
+          if (foto.tag_risco && foto.tag_risco !== "nenhuma") {
+            doc.setTextColor(239, 68, 68);
+            doc.text(`Risco: ${foto.tag_risco.toUpperCase()}`, captionX, captionY);
+            captionY += 3.5;
+            doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
+          }
+
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "italic");
+          doc.setTextColor(80, 80, 80);
+          const techDesc = sanitizeText(caption);
+          const techLines = doc.splitTextToSize(`Descricao tecnica: ${techDesc}`, captionW);
+          doc.text(techLines, captionX, captionY);
+
+          figureNum++;
+        }
+
+        y += 22;
+      }
+    }
+
+    // ── 5. SINTESE TECNICA DO DIA ──
+    y = ensureSpace(doc, y + 4, 30);
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(BC[0], BC[1], BC[2]);
-    doc.text(`TOTAL GERAL: R$ ${totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y);
-    y += 10;
-  }
+    doc.text("5. SINTESE TECNICA DO DIA", ML, y);
+    y += 6;
 
-  // ══════════════════════════════════════════
-  // REGISTRO FOTOGRAFICO COMENTADO (conditional)
-  // ══════════════════════════════════════════
-  if (includePhotos) {
-    onProgress?.("Gerando registro fotografico...");
-    doc.addPage();
-    const secFoto = nextSec();
-    const secFotoTitle = `${secFoto}. REGISTRO FOTOGRAFICO COMENTADO`;
-    trackSection(secFotoTitle);
-    y = addSectionTitle(doc, secFotoTitle, HEADER_H + 4, BC);
-
-    if (!hasAnyPhoto) {
-      y = addBodyText(doc, "Nenhum registro fotografico foi inserido no periodo analisado.", y);
+    const atividadesCount = atividades.length;
+    const ocorrenciasCount = ocorrencias.length;
+    const despesasCount = despesas.length;
+    const fotosCount = fotos.length;
+    const synthParts: string[] = [];
+    synthParts.push(`No dia ${fmtDate(rdo.data)}`);
+    if (atividadesCount > 0) {
+      synthParts.push(`foram registradas ${atividadesCount} atividade(s) executada(s)`);
     } else {
-      let figureNum = 1;
+      synthParts.push(`nao foram registradas atividades`);
+    }
+    if (rdo.fase_obra) {
+      synthParts.push(`na fase de ${rdo.fase_obra}`);
+    }
+    synthParts.push(`com equipe de ${rdo.equipe_total} pessoa(s) e ${rdo.horas_trabalhadas || 0}h trabalhadas`);
+    if (ocorrenciasCount > 0) {
+      synthParts.push(`${ocorrenciasCount} ocorrencia(s) relevante(s) registrada(s)`);
+    }
+    if (despesasCount > 0) {
+      const subtotal = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+      synthParts.push(`despesas totalizando R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
+    }
+    if (fotosCount > 0) {
+      synthParts.push(`${fotosCount} registro(s) fotografico(s) anexado(s)`);
+    }
+    const riskLabel = (rdo.risco_dia || "baixo").toLowerCase();
+    synthParts.push(`classificacao de risco: ${riskLabel}`);
 
-      for (const rdo of sorted) {
-        const fotos = allFotos[rdo.id] || [];
-        if (fotos.length === 0) continue;
+    y = addBodyText(doc, synthParts.join(", ") + ".", y);
 
-        y = ensureSpace(doc, y, 20);
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(BC[0], BC[1], BC[2]);
-        const rdoNumLabel = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")} - ` : "";
-        doc.text(`${rdoNumLabel}${fmtDate(rdo.data)}`, ML, y);
-        y += 8;
-
-        // Process photos 2 per row
-        for (let fi = 0; fi < fotos.length; fi += 2) {
-          const isGrid = fi + 1 < fotos.length;
-          const photosInRow = isGrid ? [fotos[fi], fotos[fi + 1]] : [fotos[fi]];
-
-          const imgW = isGrid ? (contentW - 6) / 2 : contentW * 0.6;
-          const imgH = imgW * 0.75;
-
-          y = ensureSpace(doc, y, imgH + 55);
-
-          for (let pi = 0; pi < photosInRow.length; pi++) {
-            const foto = photosInRow[pi];
-            const xOffset = isGrid ? ML + pi * (imgW + 6) : ML + (contentW - imgW) / 2;
-
-            onProgress?.(`Carregando foto ${figureNum + pi}...`);
-            const base64 = await loadImageAsBase64(foto.url);
-            if (base64) {
-              try {
-                doc.setDrawColor(180, 180, 180);
-                doc.setLineWidth(0.3);
-                doc.rect(xOffset - 1, y - 1, imgW + 2, imgH + 2);
-                doc.addImage(base64, "JPEG", xOffset, y, imgW, imgH);
-              } catch { /* skip */ }
-            }
-          }
-
-          // Move y past images
-          y += imgH + 4;
-
-          // Captions
-          for (let pi = 0; pi < photosInRow.length; pi++) {
-            const foto = photosInRow[pi];
-            const captionX = isGrid ? ML + pi * ((contentW - 6) / 2 + 6) : ML;
-            const captionW = isGrid ? (contentW - 6) / 2 : contentW;
-
-            const caption = buildPhotoCaption(foto, rdo.fase_obra);
-
-            // Figure title
-            doc.setFontSize(8);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-            const figTitle = `Figura ${String(figureNum).padStart(2, "0")} - ${sanitizeText(caption.substring(0, 80))}`;
-            const figLines = doc.splitTextToSize(figTitle, captionW);
-            doc.text(figLines, captionX, y);
-
-            let captionY = y + figLines.length * 3.5 + 1;
-
-            // Metadata
-            doc.setFontSize(7);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-
-            if (foto.data_captura) {
-              doc.text(`Data da captura: ${fmtDateTime(foto.data_captura)}`, captionX, captionY);
-              captionY += 3.5;
-            }
-            if (foto.latitude && foto.longitude) {
-              doc.text(`Local (GPS): ${foto.latitude.toFixed(5)}, ${foto.longitude.toFixed(5)}`, captionX, captionY);
-              captionY += 3.5;
-            }
-            if (foto.fase_obra) {
-              doc.text(`Fase da obra: ${foto.fase_obra}`, captionX, captionY);
-              captionY += 3.5;
-            }
-            if (foto.tag_risco && foto.tag_risco !== "nenhuma") {
-              doc.setTextColor(239, 68, 68);
-              doc.text(`Risco: ${foto.tag_risco.toUpperCase()}`, captionX, captionY);
-              captionY += 3.5;
-              doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-            }
-
-            // Technical description block
-            doc.setFontSize(7);
-            doc.setFont("helvetica", "italic");
-            doc.setTextColor(80, 80, 80);
-            const techDesc = sanitizeText(caption);
-            const techLines = doc.splitTextToSize(`Descricao tecnica: ${techDesc}`, captionW);
-            doc.text(techLines, captionX, captionY);
-            captionY += techLines.length * 3.2;
-
-            figureNum++;
-          }
-
-          y += 22; // spacing after caption block (12px ~= 3.2mm, but generous spacing)
-        }
-      }
+    if (rdo.observacoes_gerais) {
+      y = ensureSpace(doc, y, 10);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(80, 80, 80);
+      const obsLines = doc.splitTextToSize(sanitizeText(`Observacoes: ${rdo.observacoes_gerais}`), contentW - 10);
+      doc.text(obsLines, ML + 3, y);
+      y += obsLines.length * 3.8 + 4;
     }
   }
 
