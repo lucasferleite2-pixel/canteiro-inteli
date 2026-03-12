@@ -1066,14 +1066,20 @@ export async function generateRdoPDF(
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
       engine.renderBlock(new SubSectionTitleBlock("4. REGISTRO FOTOGRAFICO COMENTADO"));
-      const imgW = contentW * 0.6;
-      const imgH = imgW * 0.75;
-      for (let fi = 0; fi < fotos.length; fi++) {
-        const foto = fotos[fi];
-        const base64 = fotoImages[fi] || null;
-        const photoBlock = new PhotoItemBlock(foto, figureNum, base64, rdo.fase_obra, imgW, imgH);
-        engine.renderBlock(photoBlock);
+      // Render photos in grid of 2 per row
+      for (let fi = 0; fi < fotos.length; fi += 2) {
+        const leftEntry: PhotoEntry = {
+          foto: fotos[fi],
+          figureNum,
+          imgBase64: fotoImages[fi] || null,
+          faseObra: rdo.fase_obra,
+        };
         figureNum++;
+        const rightEntry: PhotoEntry | null = fi + 1 < fotos.length
+          ? { foto: fotos[fi + 1], figureNum, imgBase64: fotoImages[fi + 1] || null, faseObra: rdo.fase_obra }
+          : null;
+        if (rightEntry) figureNum++;
+        engine.renderBlock(new PhotoGridBlock(leftEntry, rightEntry, contentW));
       }
     }
 
