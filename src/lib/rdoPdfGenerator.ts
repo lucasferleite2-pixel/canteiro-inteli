@@ -433,33 +433,50 @@ class OccurrenceBoxBlock implements PdfBlock {
   }
 }
 
-// ── Photo Item Block (image + caption as single indivisible block) ──
-class PhotoItemBlock implements PdfBlock {
-  constructor(
-    private foto: any,
-    private figureNum: number,
-    private imgBase64: string | null,
-    private faseObra: string | null,
-    private imgW: number,
-    private imgH: number
-  ) {}
+// ── Photo Grid Block (2 photos per row) ──
 
-  measure(ctx: LayoutContext): number {
-    const captionH = this.measureCaption(ctx);
-    return this.imgH + 4 + captionH + 6;
+interface PhotoEntry {
+  foto: any;
+  figureNum: number;
+  imgBase64: string | null;
+  faseObra: string | null;
+}
+
+class PhotoGridBlock implements PdfBlock {
+  private colW: number;
+  private imgW: number;
+  private imgH: number;
+  private gap = 6;
+
+  constructor(
+    private left: PhotoEntry,
+    private right: PhotoEntry | null,
+    contentW: number
+  ) {
+    this.colW = (contentW - this.gap) / 2;
+    this.imgW = this.colW;
+    this.imgH = this.colW * 0.75;
   }
 
-  private measureCaption(ctx: LayoutContext): number {
+  measure(ctx: LayoutContext): number {
+    const leftH = this.imgH + 4 + this.measureCaption(ctx, this.left) + 6;
+    const rightH = this.right
+      ? this.imgH + 4 + this.measureCaption(ctx, this.right) + 6
+      : 0;
+    return Math.max(leftH, rightH);
+  }
+
+  private measureCaption(ctx: LayoutContext, entry: PhotoEntry): number {
     const { doc } = ctx;
-    const caption = buildPhotoCaption(this.foto, this.faseObra);
+    const caption = buildPhotoCaption(entry.foto, entry.faseObra);
     doc.setFontSize(8);
-    const figTitle = `Figura ${String(this.figureNum).padStart(2, "0")} - ${sanitizeText(caption.substring(0, 80))}`;
+    const figTitle = `Figura ${String(entry.figureNum).padStart(2, "0")} - ${sanitizeText(caption.substring(0, 80))}`;
     const figLines = doc.splitTextToSize(figTitle, this.imgW);
     let h = figLines.length * 3.5 + 1;
-    if (this.foto.data_captura) h += 3.5;
-    if (this.foto.latitude && this.foto.longitude) h += 3.5;
-    if (this.foto.fase_obra) h += 3.5;
-    if (this.foto.tag_risco && this.foto.tag_risco !== "nenhuma") h += 3.5;
+    if (entry.foto.data_captura) h += 3.5;
+    if (entry.foto.latitude && entry.foto.longitude) h += 3.5;
+    if (entry.foto.fase_obra) h += 3.5;
+    if (entry.foto.tag_risco && entry.foto.tag_risco !== "nenhuma") h += 3.5;
     doc.setFontSize(7);
     const techLines = doc.splitTextToSize(`Descricao tecnica: ${sanitizeText(caption)}`, this.imgW);
     h += techLines.length * 3.2 + 2;
@@ -467,48 +484,56 @@ class PhotoItemBlock implements PdfBlock {
   }
 
   render(ctx: LayoutContext, y: number): number {
-    const { doc } = ctx;
-    const xOffset = ML + (ctx.contentW - this.imgW) / 2;
+    const totalH = this.measure(ctx);
+    this.renderSingle(ctx, y, ML, this.left);
+    if (this.right) {
+      this.renderSingle(ctx, y, ML + this.colW + this.gap, this.right);
+    }
+    return y + totalH;
+  }
 
-    if (this.imgBase64) {
+  private renderSingle(ctx: LayoutContext, y: number, x: number, entry: PhotoEntry): void {
+    const { doc } = ctx;
+    let cy = y;
+
+    if (entry.imgBase64) {
       try {
         doc.setDrawColor(180, 180, 180);
         doc.setLineWidth(0.3);
-        doc.rect(xOffset - 1, y - 1, this.imgW + 2, this.imgH + 2);
-        doc.addImage(this.imgBase64, "JPEG", xOffset, y, this.imgW, this.imgH);
+        doc.rect(x - 1, cy - 1, this.imgW + 2, this.imgH + 2);
+        doc.addImage(entry.imgBase64, "JPEG", x, cy, this.imgW, this.imgH);
       } catch { /* skip */ }
     }
-    y += this.imgH + 4;
+    cy += this.imgH + 4;
 
-    // Caption
-    const caption = buildPhotoCaption(this.foto, this.faseObra);
+    const caption = buildPhotoCaption(entry.foto, entry.faseObra);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-    const figTitle = `Figura ${String(this.figureNum).padStart(2, "0")} - ${sanitizeText(caption.substring(0, 80))}`;
+    const figTitle = `Figura ${String(entry.figureNum).padStart(2, "0")} - ${sanitizeText(caption.substring(0, 80))}`;
     const figLines = doc.splitTextToSize(figTitle, this.imgW);
-    doc.text(figLines, xOffset, y);
-    y += figLines.length * 3.5 + 1;
+    doc.text(figLines, x, cy);
+    cy += figLines.length * 3.5 + 1;
 
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-    if (this.foto.data_captura) {
-      doc.text(`Data da captura: ${fmtDateTime(this.foto.data_captura)}`, xOffset, y);
-      y += 3.5;
+    if (entry.foto.data_captura) {
+      doc.text(`Data da captura: ${fmtDateTime(entry.foto.data_captura)}`, x, cy);
+      cy += 3.5;
     }
-    if (this.foto.latitude && this.foto.longitude) {
-      doc.text(`Local (GPS): ${this.foto.latitude.toFixed(5)}, ${this.foto.longitude.toFixed(5)}`, xOffset, y);
-      y += 3.5;
+    if (entry.foto.latitude && entry.foto.longitude) {
+      doc.text(`Local (GPS): ${entry.foto.latitude.toFixed(5)}, ${entry.foto.longitude.toFixed(5)}`, x, cy);
+      cy += 3.5;
     }
-    if (this.foto.fase_obra) {
-      doc.text(`Fase da obra: ${this.foto.fase_obra}`, xOffset, y);
-      y += 3.5;
+    if (entry.foto.fase_obra) {
+      doc.text(`Fase da obra: ${entry.foto.fase_obra}`, x, cy);
+      cy += 3.5;
     }
-    if (this.foto.tag_risco && this.foto.tag_risco !== "nenhuma") {
+    if (entry.foto.tag_risco && entry.foto.tag_risco !== "nenhuma") {
       doc.setTextColor(239, 68, 68);
-      doc.text(`Risco: ${this.foto.tag_risco.toUpperCase()}`, xOffset, y);
-      y += 3.5;
+      doc.text(`Risco: ${entry.foto.tag_risco.toUpperCase()}`, x, cy);
+      cy += 3.5;
       doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
     }
 
@@ -516,10 +541,7 @@ class PhotoItemBlock implements PdfBlock {
     doc.setFont("helvetica", "italic");
     doc.setTextColor(80, 80, 80);
     const techLines = doc.splitTextToSize(`Descricao tecnica: ${sanitizeText(caption)}`, this.imgW);
-    doc.text(techLines, xOffset, y);
-    y += techLines.length * 3.2 + 2;
-
-    return y;
+    doc.text(techLines, x, cy);
   }
 }
 
@@ -1044,14 +1066,20 @@ export async function generateRdoPDF(
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
       engine.renderBlock(new SubSectionTitleBlock("4. REGISTRO FOTOGRAFICO COMENTADO"));
-      const imgW = contentW * 0.6;
-      const imgH = imgW * 0.75;
-      for (let fi = 0; fi < fotos.length; fi++) {
-        const foto = fotos[fi];
-        const base64 = fotoImages[fi] || null;
-        const photoBlock = new PhotoItemBlock(foto, figureNum, base64, rdo.fase_obra, imgW, imgH);
-        engine.renderBlock(photoBlock);
+      // Render photos in grid of 2 per row
+      for (let fi = 0; fi < fotos.length; fi += 2) {
+        const leftEntry: PhotoEntry = {
+          foto: fotos[fi],
+          figureNum,
+          imgBase64: fotoImages[fi] || null,
+          faseObra: rdo.fase_obra,
+        };
         figureNum++;
+        const rightEntry: PhotoEntry | null = fi + 1 < fotos.length
+          ? { foto: fotos[fi + 1], figureNum, imgBase64: fotoImages[fi + 1] || null, faseObra: rdo.fase_obra }
+          : null;
+        if (rightEntry) figureNum++;
+        engine.renderBlock(new PhotoGridBlock(leftEntry, rightEntry, contentW));
       }
     }
 
