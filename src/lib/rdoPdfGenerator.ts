@@ -428,11 +428,7 @@ export async function generateRdoPDF(
     allFotos[rdo.id] = fotos;
   }
 
-  // Determine which conditional sections will appear
-  const hasAnyAtividade = includeActivities && sorted.some((r) => (allAtividades[r.id] || []).length > 0);
-  const hasAnyOcorrencia = includeOccurrences && sorted.some((r) => (allOcorrencias[r.id] || []).length > 0);
-  const hasAnyDespesaPdf = includeDespesas && sorted.some((r) => (allDespesas[r.id] || []).filter((d: any) => d.incluir_no_pdf).length > 0);
-  const hasAnyPhoto = includePhotos && sorted.some((r) => (allFotos[r.id] || []).length > 0);
+  // Content is now grouped by daily blocks (no global section flags needed)
 
   // ══════════════════════════════════════════
   // 1. CAPA INSTITUCIONAL (grid vertical - 4 blocos)
