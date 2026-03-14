@@ -291,27 +291,67 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
           {fotos.map((f: any) => (
             <div key={f.id} className="relative group rounded-md overflow-hidden border">
               <img src={f.url} alt={f.descricao || f.file_name} className="w-full aspect-square object-cover" loading="lazy" />
-              {canEdit && (
-                <button
-                  onClick={() => deleteMutation.mutate(f)}
-                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                {f.file_name && <p className="text-[10px] text-white font-medium truncate">{f.file_name}</p>}
-                {f.data_captura && (
-                  <p className="text-[9px] text-white/80">{format(new Date(f.data_captura), "dd/MM/yyyy", { locale: ptBR })}</p>
-                )}
-                {f.descricao && <p className="text-[10px] text-white/90 line-clamp-1 mt-0.5">{f.descricao}</p>}
-                <div className="flex gap-1 mt-0.5">
-                  {f.fase_obra && <Badge variant="secondary" className="text-[8px] h-4">{f.fase_obra}</Badge>}
-                  {f.tag_risco && f.tag_risco !== "nenhuma" && (
-                    <Badge className={`text-[8px] h-4 ${tagColors[f.tag_risco] || ""}`}>{f.tag_risco}</Badge>
-                  )}
+              {canEdit && editingId !== f.id && (
+                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => startEditing(f)} className="bg-black/60 text-white rounded-full p-1">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => deleteMutation.mutate(f)} className="bg-black/60 text-white rounded-full p-1">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-              </div>
+              )}
+
+              {editingId === f.id ? (
+                <div className="absolute inset-x-0 bottom-0 bg-black/80 p-2 space-y-1.5">
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="h-6 text-xs bg-white/10 text-white border-white/20 placeholder:text-white/50"
+                    placeholder="Título da foto"
+                  />
+                  <Input
+                    value={editDescricao}
+                    onChange={(e) => setEditDescricao(e.target.value)}
+                    className="h-6 text-xs bg-white/10 text-white border-white/20 placeholder:text-white/50"
+                    placeholder="Descrição"
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="h-6 w-full justify-start text-left text-xs bg-white/10 text-white border-white/20">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {format(editDate, "dd/MM/yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={editDate} onSelect={(d) => d && setEditDate(d)} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <div className="flex gap-1">
+                    <Button size="sm" className="h-6 text-xs flex-1" onClick={saveEdit} disabled={updateMutation.isPending}>
+                      {updateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="mr-1 h-3 w-3" />}
+                      Salvar
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs text-white" onClick={() => setEditingId(null)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                  {f.file_name && <p className="text-[10px] text-white font-medium truncate">{f.file_name}</p>}
+                  {f.data_captura && (
+                    <p className="text-[9px] text-white/80">{format(new Date(f.data_captura), "dd/MM/yyyy", { locale: ptBR })}</p>
+                  )}
+                  {f.descricao && <p className="text-[10px] text-white/90 line-clamp-1 mt-0.5">{f.descricao}</p>}
+                  <div className="flex gap-1 mt-0.5">
+                    {f.fase_obra && <Badge variant="secondary" className="text-[8px] h-4">{f.fase_obra}</Badge>}
+                    {f.tag_risco && f.tag_risco !== "nenhuma" && (
+                      <Badge className={`text-[8px] h-4 ${tagColors[f.tag_risco] || ""}`}>{f.tag_risco}</Badge>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
