@@ -82,6 +82,31 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
     onError: (err: any) => toast({ variant: "destructive", title: "Erro", description: err.message }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, file_name, descricao, data_captura }: { id: string; file_name: string; descricao: string; data_captura: string }) => {
+      const { error } = await supabase.from("rdo_foto").update({ file_name, descricao: descricao || null, data_captura }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rdo_foto", rdoDiaId] });
+      setEditingId(null);
+      toast({ title: "Foto atualizada." });
+    },
+    onError: (err: any) => toast({ variant: "destructive", title: "Erro", description: err.message }),
+  });
+
+  const startEditing = (foto: any) => {
+    setEditingId(foto.id);
+    setEditName(foto.file_name || "");
+    setEditDescricao(foto.descricao || "");
+    setEditDate(foto.data_captura ? new Date(foto.data_captura) : new Date());
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !editName.trim()) return;
+    updateMutation.mutate({ id: editingId, file_name: editName, descricao: editDescricao, data_captura: editDate.toISOString() });
+  };
+
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
