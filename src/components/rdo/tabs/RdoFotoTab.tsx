@@ -47,6 +47,12 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
   const [tagRisco, setTagRisco] = useState("nenhuma");
   const [uploading, setUploading] = useState(false);
 
+  // Inline edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescricao, setEditDescricao] = useState("");
+  const [editDate, setEditDate] = useState<Date>(new Date());
+
   const { data: fotos = [], isLoading } = useQuery({
     queryKey: ["rdo_foto", rdoDiaId],
     queryFn: async () => {
