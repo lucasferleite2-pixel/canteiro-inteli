@@ -380,6 +380,13 @@ const BADGE_COLORS: Record<string, [number, number, number, number, number, numb
   oc_critico:     [255, 210, 210, 160, 20, 20],     // deep red
   oc_risco:       [255, 200, 200, 160, 30, 30],     // risk red
   oc_responsavel: [235, 235, 238, 80, 80, 90],      // neutral
+  // Material-specific
+  mat_tipo:       [225, 232, 248, 45, 75, 145],     // blue-gray
+  mat_unidade:    [235, 235, 238, 80, 80, 90],      // neutral
+  mat_fase:       [230, 240, 250, 50, 80, 140],     // light blue
+  mat_custo:      [235, 245, 235, 40, 100, 50],     // green
+  mat_alerta:     [255, 225, 225, 180, 40, 40],     // red
+  mat_orcamento:  [220, 245, 220, 30, 110, 40],     // green
 };
 
 function getImpactoBadgeKey(impacto: string | null): string | null {
