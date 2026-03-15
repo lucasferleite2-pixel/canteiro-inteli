@@ -1326,21 +1326,31 @@ export async function generateRdoPDF(
       }
     }
 
-    // 3. Expenses
+    // 3. Materials & Equipment
+    if (includeMaterials && materiais.length > 0) {
+      engine.renderBlock(new SpacerBlock(4));
+      engine.ensureSpace(20);
+      engine.renderBlock(new SubSectionTitleBlock("3. MATERIAIS E EQUIPAMENTOS"));
+      for (let mi = 0; mi < materiais.length; mi++) {
+        engine.renderBlock(new MaterialItemBlock(materiais[mi], mi === materiais.length - 1));
+      }
+    }
+
+    // 4. Expenses
     if (includeDespesas && despesas.length > 0) {
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
-      engine.renderBlock(new SubSectionTitleBlock("3. DESPESAS DO DIA"));
+      engine.renderBlock(new SubSectionTitleBlock("4. DESPESAS DO DIA"));
       const expBlock = new ExpensesTableBlock(despesas);
       engine.renderBlock(expBlock);
       totalGeralDespesas += despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
     }
 
-    // 4. Photos
+    // 5. Photos
     if (includePhotos && fotos.length > 0) {
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
-      engine.renderBlock(new SubSectionTitleBlock("4. REGISTRO FOTOGRAFICO COMENTADO"));
+      engine.renderBlock(new SubSectionTitleBlock("5. REGISTRO FOTOGRAFICO COMENTADO"));
       // Render photos in grid of 2 per row
       for (let fi = 0; fi < fotos.length; fi += 2) {
         const leftEntry: PhotoEntry = {
@@ -1358,10 +1368,10 @@ export async function generateRdoPDF(
       }
     }
 
-    // 5. Technical Synthesis
+    // 6. Technical Synthesis
     engine.renderBlock(new SpacerBlock(4));
     engine.ensureSpace(30);
-    engine.renderBlock(new SubSectionTitleBlock("5. SINTESE TECNICA DO DIA"));
+    engine.renderBlock(new SubSectionTitleBlock("6. SINTESE TECNICA DO DIA"));
 
     const synthParts: string[] = [];
     synthParts.push(`No dia ${fmtDate(rdo.data)}`);
