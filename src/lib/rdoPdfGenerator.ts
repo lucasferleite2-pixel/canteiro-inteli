@@ -1379,6 +1379,7 @@ export async function generateRdoPDF(
     if (rdo.fase_obra) synthParts.push(`na fase de ${rdo.fase_obra}`);
     synthParts.push(`com equipe de ${rdo.equipe_total} pessoa(s) e ${rdo.horas_trabalhadas || 0}h trabalhadas`);
     if (ocorrencias.length > 0) synthParts.push(`${ocorrencias.length} ocorrencia(s) relevante(s) registrada(s)`);
+    if (materiais.length > 0) synthParts.push(`${materiais.length} item(ns) de materiais/equipamentos registrado(s)`);
     if (despesas.length > 0) {
       const sub = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
       synthParts.push(`despesas totalizando R$ ${sub.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
