@@ -1149,8 +1149,8 @@ export async function generateRdoPDF(
       engine.renderBlock(new SubSectionTitleBlock("1. ATIVIDADES EXECUTADAS"));
       if (atividades.length > 0) {
         const sortedAtiv = [...atividades].sort((a: any, b: any) => (a.hora || "99:99").localeCompare(b.hora || "99:99"));
-        for (const a of sortedAtiv) {
-          const block = new ActivityItemBlock(a);
+        for (let ai = 0; ai < sortedAtiv.length; ai++) {
+          const block = new ActivityItemBlock(sortedAtiv[ai], ai === sortedAtiv.length - 1);
           engine.renderBlock(block);
         }
       } else {
