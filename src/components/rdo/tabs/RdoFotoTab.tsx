@@ -33,7 +33,7 @@ const tagRiscoOptions = [
   { value: "contratual", label: "Contratual" },
 ];
 
-export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
+export function RdoFotoTab({ rdoDiaId, companyId, canEdit, rdoDate }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
