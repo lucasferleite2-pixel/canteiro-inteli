@@ -1414,9 +1414,12 @@ export async function generateRdoPDF(
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
       engine.renderBlock(new SubSectionTitleBlock("4. DESPESAS DO DIA"));
-      const expBlock = new ExpensesTableBlock(despesas);
-      engine.renderBlock(expBlock);
-      totalGeralDespesas += despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+      despesas.forEach((d: any, idx: number) => {
+        engine.renderBlock(new ExpenseItemBlock(d, idx === despesas.length - 1));
+      });
+      const subtotalDesp = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+      engine.renderBlock(new ExpensesSubtotalBlock(subtotalDesp));
+      totalGeralDespesas += subtotalDesp;
     }
 
     // 5. Photos
