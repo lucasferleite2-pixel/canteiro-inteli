@@ -919,11 +919,26 @@ export async function generateRdoPDF(
   doc.text("Documento gerado automaticamente pelo ERP Canteiro Inteli", coverCenterX, pageH - 4, { align: "center" });
 
   // ══════════════════════════════════════════
-  // SUMARIO (placeholder page)
+  // SUMARIO — Reserve pages upfront
   // ══════════════════════════════════════════
-  doc.addPage();
+  // Calculate how many TOC pages we need based on known section count
+  const fixedSections = 9; // IDENTIFICACAO, OBJETIVO, METODOLOGIA, daily blocks header, INDICADORES, ANALISE, CONCLUSAO, RECOMENDACOES, ASSINATURA, VERIFICACAO
+  const totalTocEntries = fixedSections + sorted.length;
+  const tocEntryH = 7;
+  const tocTitleH = 14;
+  const tocUsableH = usableBottom - USABLE_TOP;
+  const firstPageEntries = Math.floor((tocUsableH - tocTitleH) / tocEntryH);
+  const remainingEntries = Math.max(0, totalTocEntries - firstPageEntries);
+  const entriesPerExtraPage = Math.floor(tocUsableH / tocEntryH);
+  const extraTocPages = remainingEntries > 0 ? Math.ceil(remainingEntries / entriesPerExtraPage) : 0;
+  const totalTocPages = 1 + extraTocPages;
+
+  // Reserve all TOC pages in sequence after the cover
+  const tocFirstPage = doc.getNumberOfPages() + 1;
+  for (let tp = 0; tp < totalTocPages; tp++) {
+    doc.addPage();
+  }
   trackSection("SUMARIO");
-  const tocPageNum = doc.getNumberOfPages();
 
   // ══════════════════════════════════════════
   // INSTITUTIONAL SECTIONS via Layout Engine
