@@ -1541,8 +1541,173 @@ export async function generateRdoPDF(
   }
 
   // ══════════════════════════════════════════
-  // ANALISE TECNICA
+  // RESUMO FINANCEIRO CONSOLIDADO
   // ══════════════════════════════════════════
+  if (includeDespesas && totalGeralDespesas > 0) {
+    onProgress?.("Gerando resumo financeiro consolidado...");
+    doc.addPage();
+    engine.setY(USABLE_TOP);
+    const secFinTitle = `${nextSec()}. RESUMO FINANCEIRO CONSOLIDADO`;
+    trackSection(secFinTitle);
+    engine.renderBlock(new SectionTitleBlock(secFinTitle));
+
+    engine.renderBlock(new BodyTextBlock(
+      `Este quadro apresenta a consolidacao das despesas registradas nos ${sorted.length} dia(s) do periodo ` +
+      `de ${period}, segmentadas por tipo de despesa. Os valores correspondem ao somatorio dos itens ` +
+      `marcados para inclusao no relatorio.`
+    ));
+
+    // Aggregate expenses by type
+    const tipoLabels: Record<string, string> = {
+      material: "Material", mao_de_obra: "Mao de Obra", equipamento: "Equipamento",
+      transporte: "Transporte", outro: "Outro",
+    };
+    const tipoColors: Record<string, RGB> = {
+      material: [44, 123, 229],
+      mao_de_obra: [234, 88, 12],
+      equipamento: [16, 185, 129],
+      transporte: [139, 92, 246],
+      outro: [107, 114, 128],
+    };
+    const byTipo: Record<string, { qty: number; total: number; count: number }> = {};
+    for (const rdo of sorted) {
+      const despesas = allDespesas[rdo.id] || [];
+      for (const d of despesas) {
+        if (!d.incluir_no_pdf) continue;
+        const tipo = d.tipo || "outro";
+        if (!byTipo[tipo]) byTipo[tipo] = { qty: 0, total: 0, count: 0 };
+        byTipo[tipo].qty += Number(d.quantidade || 0);
+        byTipo[tipo].total += Number(d.valor_total || 0);
+        byTipo[tipo].count += 1;
+      }
+    }
+
+    const fmtMoney = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    const tipoEntries = Object.entries(byTipo).sort((a, b) => b[1].total - a[1].total);
+
+    // Summary table
+    const finHead = [["Tipo de Despesa", "Itens", "Quantidade", "Valor Total", "% do Total"]];
+    const finBody = tipoEntries.map(([tipo, data]) => [
+      tipoLabels[tipo] || tipo,
+      String(data.count),
+      data.qty.toLocaleString("pt-BR"),
+      fmtMoney(data.total),
+      `${totalGeralDespesas > 0 ? ((data.total / totalGeralDespesas) * 100).toFixed(1) : "0.0"}%`,
+    ]);
+    finBody.push([
+      "TOTAL GERAL",
+      String(tipoEntries.reduce((s, [, d]) => s + d.count, 0)),
+      tipoEntries.reduce((s, [, d]) => s + d.qty, 0).toLocaleString("pt-BR"),
+      fmtMoney(totalGeralDespesas),
+      "100.0%",
+    ]);
+
+    engine.renderBlock(new SpacerBlock(4));
+    engine.renderBlock(new TableBlock(finHead, finBody, {
+      columnStyles: {
+        0: { fontStyle: "bold", cellWidth: 45 },
+        1: { halign: "center", cellWidth: 18 },
+        2: { halign: "right", cellWidth: 28 },
+        3: { halign: "right", cellWidth: 35 },
+        4: { halign: "center", cellWidth: 25 },
+      },
+    }));
+
+    // Bar chart by type
+    if (tipoEntries.length > 1) {
+      engine.ensureSpace(55);
+      const chartY = engine.getY() + 8;
+      const chartData = tipoEntries.map(([tipo, data]) => ({
+        label: (tipoLabels[tipo] || tipo).substring(0, 10),
+        value: data.total,
+        color: (tipoColors[tipo] || GRAY_TEXT) as RGB,
+      }));
+
+      // Draw bar chart with money values
+      const chartW = contentW;
+      const chartH = 38;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(BC[0], BC[1], BC[2]);
+      doc.text("Distribuicao de Despesas por Tipo", ML, chartY - 4);
+
+      const maxVal = Math.max(...chartData.map((d) => d.value), 1);
+      const barW = Math.min(28, (chartW - 20) / chartData.length - 6);
+      const chartBottom = chartY + chartH;
+      const chartTop = chartY + 4;
+      const chartHInner = chartBottom - chartTop;
+
+      // Grid
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(ML, chartTop, ML, chartBottom);
+      doc.line(ML, chartBottom, ML + chartW, chartBottom);
+      for (let i = 0; i <= 4; i++) {
+        const gy = chartBottom - (chartHInner * i) / 4;
+        doc.setDrawColor(230, 230, 230);
+        doc.line(ML + 1, gy, ML + chartW, gy);
+        doc.setFontSize(6);
+        doc.setTextColor(150, 150, 150);
+        const gVal = (maxVal * i) / 4;
+        const gLabel = gVal >= 1000 ? `${(gVal / 1000).toFixed(0)}k` : gVal.toFixed(0);
+        doc.text(gLabel, ML - 2, gy + 1, { align: "right" });
+      }
+
+      // Bars
+      chartData.forEach((d, i) => {
+        const bx = ML + 10 + i * (barW + 8);
+        const bh = (d.value / maxVal) * chartHInner;
+        const by = chartBottom - bh;
+        doc.setFillColor(d.color[0], d.color[1], d.color[2]);
+        doc.roundedRect(bx, by, barW, bh, 1.5, 1.5, "F");
+
+        // Value on top
+        doc.setFontSize(6);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(d.color[0], d.color[1], d.color[2]);
+        const valLabel = d.value >= 1000 ? `R$${(d.value / 1000).toFixed(1)}k` : `R$${d.value.toFixed(0)}`;
+        doc.text(valLabel, bx + barW / 2, by - 2, { align: "center" });
+
+        // Label below
+        doc.setFontSize(6);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(80, 80, 80);
+        doc.text(d.label, bx + barW / 2, chartBottom + 4, { align: "center" });
+      });
+
+      engine.setY(chartBottom + 10);
+    }
+
+    // Daily breakdown mini-table
+    const dailyWithDesp = sorted.filter((r) => {
+      const desp = (allDespesas[r.id] || []).filter((d: any) => d.incluir_no_pdf);
+      return desp.length > 0;
+    });
+    if (dailyWithDesp.length > 1) {
+      engine.ensureSpace(20);
+      engine.renderBlock(new SubSectionTitleBlock("Despesas por Dia"));
+      const dailyHead = [["Data", "RDO", "Itens", "Valor do Dia"]];
+      let acum = 0;
+      const dailyBody = dailyWithDesp.map((rdo, idx) => {
+        const desp = (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf);
+        const sub = desp.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+        acum += sub;
+        const rdoNum = rdo.numero_sequencial ? `RDO ${String(rdo.numero_sequencial).padStart(3, "0")}` : `RDO ${String(idx + 1).padStart(3, "0")}`;
+        return [fmtDateShort(rdo.data), rdoNum, String(desp.length), fmtMoney(sub)];
+      });
+      dailyBody.push(["", "TOTAL", "", fmtMoney(acum)]);
+      engine.renderBlock(new TableBlock(dailyHead, dailyBody, {
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 28 },
+          2: { halign: "center", cellWidth: 18 },
+          3: { halign: "right", cellWidth: 35 },
+        },
+      }));
+    }
+  }
+
+
   onProgress?.("Gerando analise tecnica...");
   doc.addPage();
   engine.setY(USABLE_TOP);
