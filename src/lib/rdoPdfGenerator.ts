@@ -387,6 +387,14 @@ const BADGE_COLORS: Record<string, [number, number, number, number, number, numb
   mat_custo:      [235, 245, 235, 40, 100, 50],     // green
   mat_alerta:     [255, 225, 225, 180, 40, 40],     // red
   mat_orcamento:  [220, 245, 220, 30, 110, 40],     // green
+  // Expense-specific
+  desp_tipo:      [225, 232, 248, 45, 75, 145],     // blue-gray
+  desp_valor:     [235, 245, 235, 40, 100, 50],     // green
+  desp_custo:     [230, 240, 250, 50, 80, 140],     // light blue
+  desp_previsto:  [220, 245, 220, 30, 110, 40],     // green
+  desp_nao_prev:  [255, 237, 213, 180, 100, 20],    // orange
+  desp_curva:     [235, 235, 238, 80, 80, 90],      // neutral
+  desp_pdf:       [220, 230, 245, 40, 70, 140],     // blue-gray
 };
 
 function getImpactoBadgeKey(impacto: string | null): string | null {
