@@ -570,8 +570,8 @@ export async function generateDiaryPDF(
   doc.addImage(qrDataUrl, "PNG", 14, 96, 40, 40);
   doc.setFontSize(7);
   doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório.", 14, 142);
-  doc.text("O código contém o identificador único e o hash de integridade do documento.", 14, 147);
+  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório no sistema.", 14, 142);
+  doc.text("O código direciona para a página de verificação pública do documento.", 14, 147);
 
   // Header + Footer on all pages
   const totalPages = doc.getNumberOfPages();
