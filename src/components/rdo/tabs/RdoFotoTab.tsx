@@ -224,11 +224,33 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
                     placeholder="Nome da foto"
                   />
                 </div>
-                <div className="w-36 shrink-0">
-                  <Label className="text-xs text-muted-foreground">Data</Label>
+                <div className="w-44 shrink-0">
+                  <div className="flex items-center gap-1">
+                    <Label className="text-xs text-muted-foreground">Data</Label>
+                    {autoFilledDates[i] && (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-accent px-1.5 py-0 text-[9px] font-medium text-accent-foreground cursor-help">
+                              auto <Info className="h-2.5 w-2.5" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[200px] text-xs">
+                            Data sugerida automaticamente. Você pode alterar se necessário.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("h-7 w-full justify-start text-left text-xs font-normal")}>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-7 w-full justify-start text-left text-xs font-normal",
+                          autoFilledDates[i] && "bg-accent/40 border-accent"
+                        )}
+                      >
                         <CalendarIcon className="mr-1 h-3 w-3" />
                         {format(capturedDates[i] || new Date(), "dd/MM/yyyy")}
                       </Button>
@@ -238,8 +260,12 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
                         mode="single"
                         selected={capturedDates[i]}
                         onSelect={(date) => {
-                          if (date) setCapturedDates((prev) => prev.map((d, j) => j === i ? date : d));
+                          if (date) {
+                            setCapturedDates((prev) => prev.map((d, j) => j === i ? date : d));
+                            setAutoFilledDates((prev) => prev.map((a, j) => j === i ? false : a));
+                          }
                         }}
+                        disabled={(date) => date > new Date()}
                         locale={ptBR}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
