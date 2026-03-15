@@ -1269,6 +1269,7 @@ export async function generateRdoPDF(
     const rdo = sorted[dayIdx];
     const atividades = allAtividades[rdo.id] || [];
     const ocorrencias = allOcorrencias[rdo.id] || [];
+    const materiais = includeMaterials ? (allMateriais[rdo.id] || []) : [];
     const despesas = includeDespesas ? (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf) : [];
     const fotos = allFotos[rdo.id] || [];
     const fotoImages = allFotoImages[rdo.id] || [];
