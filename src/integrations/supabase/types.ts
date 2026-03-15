@@ -1160,6 +1160,75 @@ export type Database = {
           },
         ]
       }
+      report_verifications: {
+        Row: {
+          company_id: string | null
+          company_name: string | null
+          created_at: string
+          entries_count: number | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          integrity_hash: string
+          metadata: Json | null
+          project_id: string | null
+          project_name: string
+          report_id: string
+          report_type: string
+          short_hash: string
+          technical_responsible: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          entries_count?: number | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          integrity_hash: string
+          metadata?: Json | null
+          project_id?: string | null
+          project_name: string
+          report_id: string
+          report_type?: string
+          short_hash: string
+          technical_responsible?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          entries_count?: number | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          integrity_hash?: string
+          metadata?: Json | null
+          project_id?: string | null
+          project_name?: string
+          report_id?: string
+          report_type?: string
+          short_hash?: string
+          technical_responsible?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_verifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_verifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string
