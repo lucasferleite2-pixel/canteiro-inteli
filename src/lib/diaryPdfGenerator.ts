@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
+import { buildVerificationUrl, saveReportVerification } from "@/lib/reportVerification";
 
 const weatherLabels: Record<string, string> = {
   ensolarado: "Ensolarado",
@@ -167,14 +168,22 @@ export async function generateDiaryPDF(
 
   // QR Code
   onProgress?.("Gerando QR Code...");
-  const qrContent = JSON.stringify({
-    id: reportId,
-    hash: shortHash,
-    project: projectName,
-    entries: entries.length,
-    generated: now.toISOString(),
+  const verificationUrl = buildVerificationUrl(reportId);
+  const qrDataUrl = await generateQRDataUrl(verificationUrl);
+
+  // Save verification record
+  await saveReportVerification({
+    report_id: reportId,
+    report_type: "diary",
+    project_name: projectName,
+    company_name: companyName,
+    company_id: companyId,
+    generated_by: userName,
+    integrity_hash: integrityHash,
+    short_hash: shortHash,
+    entries_count: entries.length,
+    technical_responsible: technicalResponsible,
   });
-  const qrDataUrl = await generateQRDataUrl(qrContent);
 
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -561,8 +570,8 @@ export async function generateDiaryPDF(
   doc.addImage(qrDataUrl, "PNG", 14, 96, 40, 40);
   doc.setFontSize(7);
   doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
-  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório.", 14, 142);
-  doc.text("O código contém o identificador único e o hash de integridade do documento.", 14, 147);
+  doc.text("Escaneie o QR Code para verificar a autenticidade deste relatório no sistema.", 14, 142);
+  doc.text("O código direciona para a página de verificação pública do documento.", 14, 147);
 
   // Header + Footer on all pages
   const totalPages = doc.getNumberOfPages();

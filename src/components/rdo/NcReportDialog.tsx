@@ -138,6 +138,7 @@ export function NcReportDialog({ open, onOpenChange, projectName, projectAddress
           items: validItems,
           additionalNorms: additionalNorms || undefined,
           conclusions: conclusions || undefined,
+          companyId: companyId || undefined,
         },
         (step) => setProgress(step)
       );

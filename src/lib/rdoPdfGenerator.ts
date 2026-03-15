@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
+import { buildVerificationUrl, saveReportVerification } from "@/lib/reportVerification";
 
 // ── Design Constants ──
 const BLUE_TECH: [number, number, number] = [15, 47, 87];
@@ -1087,7 +1088,23 @@ export async function generateRdoPDF(
   const integrityHash = await computeHash(JSON.stringify({ reportId, projectName, generated: now.toISOString(), count: rdos.length, ids: rdos.map((r) => r.id) }));
   const shortHash = integrityHash.substring(0, 16).toUpperCase();
   onProgress?.("Gerando QR Code...");
-  const qrDataUrl = await generateQR(JSON.stringify({ id: reportId, hash: shortHash, project: projectName, entries: rdos.length, generated: now.toISOString() }));
+  const verificationUrl = buildVerificationUrl(reportId);
+  const qrDataUrl = await generateQR(verificationUrl);
+
+  // Save verification record for public lookup
+  await saveReportVerification({
+    report_id: reportId,
+    report_type: "rdo",
+    project_name: projectName,
+    company_name: companyName,
+    company_id: companyId,
+    project_id: undefined,
+    generated_by: userName,
+    integrity_hash: integrityHash,
+    short_hash: shortHash,
+    entries_count: rdos.length,
+    technical_responsible: technicalResponsible,
+  });
 
   const sorted = [...rdos].sort((a, b) => a.data.localeCompare(b.data));
   const period = sorted.length > 0 ? `${fmtDateShort(sorted[0].data)} a ${fmtDateShort(sorted[sorted.length - 1].data)}` : "—";

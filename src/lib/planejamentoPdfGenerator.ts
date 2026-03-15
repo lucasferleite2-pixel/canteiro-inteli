@@ -494,16 +494,10 @@ export async function generatePlanejamentoPdf({ obraName, obraBudget, fases, com
   // ══════════════════════════════════════════
   // QR CODE + FOOTER
   // ══════════════════════════════════════════
-  const qrPayload = JSON.stringify({
-    doc: "planejamento",
-    obra: obraName,
-    fases: fases.length,
-    cobertura: `${cobertura}%`,
-    gerado: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-  });
+  const verificationUrl = `https://erp.valenobre.com/verificar/PLN-${format(new Date(), "yyyyMMddHHmmss")}`;
   let qrDataUrl: string | null = null;
   try {
-    qrDataUrl = await QRCode.toDataURL(qrPayload, { width: 120, margin: 1 });
+    qrDataUrl = await QRCode.toDataURL(verificationUrl, { width: 120, margin: 1 });
   } catch {
     qrDataUrl = null;
   }

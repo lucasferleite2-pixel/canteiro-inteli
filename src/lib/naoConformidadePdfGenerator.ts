@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import QRCode from "qrcode";
+import { buildVerificationUrl, saveReportVerification } from "@/lib/reportVerification";
 
 // ── Design Constants ──
 const BLUE_TECH: [number, number, number] = [15, 47, 87];
@@ -110,6 +111,7 @@ export interface NcPdfOptions {
   items: NcItem[];
   additionalNorms?: string;
   conclusions?: string;
+  companyId?: string;
 }
 
 const SEVERITY_LABELS: Record<NcSeverity, string> = {
@@ -262,7 +264,24 @@ export async function generateNaoConformidadePDF(
   const integrityHash = await computeHash(JSON.stringify({ reportId, projectName, generated: now.toISOString(), items: items.length }));
   const shortHash = integrityHash.substring(0, 16).toUpperCase();
   onProgress?.("Gerando QR Code...");
-  const qrDataUrl = await generateQR(JSON.stringify({ id: reportId, hash: shortHash, project: projectName, nc_items: items.length, generated: now.toISOString() }));
+  const verificationUrl = buildVerificationUrl(reportId);
+  const qrDataUrl = await generateQR(verificationUrl);
+
+  // Save verification record if companyId available
+  if (options.companyId) {
+    await saveReportVerification({
+      report_id: reportId,
+      report_type: "nc",
+      project_name: projectName,
+      company_name: companyName,
+      company_id: options.companyId,
+      generated_by: userName,
+      integrity_hash: integrityHash,
+      short_hash: shortHash,
+      entries_count: items.length,
+      technical_responsible: technicalResponsible,
+    });
+  }
 
   const bookmarks: { title: string; page: number }[] = [];
   function trackSection(title: string) {
