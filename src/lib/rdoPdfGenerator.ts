@@ -387,6 +387,14 @@ const BADGE_COLORS: Record<string, [number, number, number, number, number, numb
   mat_custo:      [235, 245, 235, 40, 100, 50],     // green
   mat_alerta:     [255, 225, 225, 180, 40, 40],     // red
   mat_orcamento:  [220, 245, 220, 30, 110, 40],     // green
+  // Expense-specific
+  desp_tipo:      [225, 232, 248, 45, 75, 145],     // blue-gray
+  desp_valor:     [235, 245, 235, 40, 100, 50],     // green
+  desp_custo:     [230, 240, 250, 50, 80, 140],     // light blue
+  desp_previsto:  [220, 245, 220, 30, 110, 40],     // green
+  desp_nao_prev:  [255, 237, 213, 180, 100, 20],    // orange
+  desp_curva:     [235, 235, 238, 80, 80, 90],      // neutral
+  desp_pdf:       [220, 230, 245, 40, 70, 140],     // blue-gray
 };
 
 function getImpactoBadgeKey(impacto: string | null): string | null {
@@ -805,42 +813,107 @@ class PhotoGridBlock implements PdfBlock {
 }
 
 // ── Expenses Table Block (subtotal included) ──
-class ExpensesTableBlock implements PdfBlock {
+class ExpenseItemBlock implements PdfBlock {
   private tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mao de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
-  constructor(private despesas: any[]) {}
+  constructor(private d: any, private isLast: boolean = false) {}
 
-  measure(): number {
-    return 8 + this.despesas.length * 7 + 12; // header + rows + subtotal
+  measure(ctx: LayoutContext): number {
+    const descColW = ctx.contentW - HORA_COL_W - 8;
+    ctx.doc.setFontSize(10);
+    const descLines = ctx.doc.splitTextToSize(sanitizeText(this.d.descricao), descColW);
+    const descH = descLines.length * 4.5;
+    return Math.max(descH + BADGE_H + 12, 18) + (this.isLast ? 0 : 3);
   }
 
   render(ctx: LayoutContext, y: number): number {
-    const { doc, BC } = ctx;
-    autoTable(doc, {
-      startY: y,
-      head: [["Descricao", "Tipo", "Qtd", "Unid.", "V. Unit.", "V. Total"]],
-      body: this.despesas.map((d: any) => [
-        sanitizeText(d.descricao.substring(0, 50)),
-        this.tipoLabels[d.tipo] || d.tipo,
-        String(d.quantidade || 0),
-        d.unidade || "un",
-        `R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-        `R$ ${Number(d.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-      ]),
-      theme: "grid",
-      headStyles: { fillColor: [BC[0], BC[1], BC[2]] },
-      styles: { fontSize: 7, cellPadding: 2 },
-      margin: { left: ML, right: MR, top: ctx.usableTop },
-    });
-    y = ((doc as any).lastAutoTable?.finalY || y + 20) + 2;
+    const { doc, contentW } = ctx;
+    const d = this.d;
+    const blockH = this.measure(ctx) - (this.isLast ? 0 : 3);
+    const descColW = contentW - HORA_COL_W - 8;
 
-    const subtotal = this.despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
-    doc.setFontSize(8);
+    // Soft background
+    doc.setFillColor(248, 249, 252);
+    doc.roundedRect(ML, y, contentW, blockH, 1.5, 1.5, "F");
+
+    // Timeline dot (green for money)
+    doc.setFillColor(40, 160, 80);
+    doc.circle(ML + HORA_COL_W / 2, y + 6, TIMELINE_DOT_R, "F");
+
+    // Value in left column (bold, green)
+    const valorTotal = Number(d.valor_total || 0);
+    const valorStr = `R$ ${valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(30, 120, 50);
+    doc.text(valorStr, ML + 4, y + 6.5);
+
+    // Description
+    const descX = ML + HORA_COL_W + 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
     doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-    doc.text(`Subtotal do dia: R$ ${subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 2);
-    return y + 8;
+    const descLines = doc.splitTextToSize(sanitizeText(d.descricao), descColW);
+    doc.text(descLines, descX, y + 6);
+    const descH = descLines.length * 4.5;
+
+    // Badges row
+    const badgeY = y + descH + 7;
+    let bx = descX;
+
+    // Tipo badge
+    const tipoLabel = this.tipoLabels[d.tipo] || d.tipo;
+    bx += drawBadge(doc, tipoLabel, bx, badgeY, "desp_tipo") + 3;
+
+    // Quantity + unit
+    const qtdStr = `${Number(d.quantidade || 0).toLocaleString("pt-BR")} ${d.unidade || "un"}`;
+    bx += drawBadge(doc, qtdStr, bx, badgeY, "desp_curva") + 3;
+
+    // Unit value
+    const vuStr = `Unit: R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    bx += drawBadge(doc, vuStr, bx, badgeY, "desp_valor") + 3;
+
+    // Budget badge
+    if (d.previsto_no_orcamento) {
+      bx += drawBadge(doc, "Previsto", bx, badgeY, "desp_previsto") + 3;
+    } else {
+      bx += drawBadge(doc, "Nao previsto", bx, badgeY, "desp_nao_prev") + 3;
+    }
+
+    // Centro de custo
+    if (d.centro_custo) {
+      bx += drawBadge(doc, `CC: ${d.centro_custo}`, bx, badgeY, "desp_custo") + 3;
+    }
+
+    // Afeta curva financeira
+    if (d.afeta_curva_financeira) {
+      bx += drawBadge(doc, "Curva financeira", bx, badgeY, "desp_curva") + 3;
+    }
+
+    // Divider
+    if (!this.isLast) {
+      const divY = y + blockH + 1;
+      doc.setDrawColor(217, 217, 217);
+      doc.setLineWidth(0.3);
+      doc.line(ML + 4, divY, ML + contentW - 4, divY);
+    }
+
+    return y + blockH + (this.isLast ? 0 : 3);
   }
 }
+
+class ExpensesSubtotalBlock implements PdfBlock {
+  constructor(private subtotal: number) {}
+  measure(): number { return 10; }
+  render(ctx: LayoutContext, y: number): number {
+    const { doc } = ctx;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+    doc.text(`Subtotal do dia: R$ ${this.subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 5);
+    return y + 10;
+  }
+}
+
 
 // ── Spacer Block ──
 class SpacerBlock implements PdfBlock {
@@ -1341,9 +1414,12 @@ export async function generateRdoPDF(
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
       engine.renderBlock(new SubSectionTitleBlock("4. DESPESAS DO DIA"));
-      const expBlock = new ExpensesTableBlock(despesas);
-      engine.renderBlock(expBlock);
-      totalGeralDespesas += despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+      despesas.forEach((d: any, idx: number) => {
+        engine.renderBlock(new ExpenseItemBlock(d, idx === despesas.length - 1));
+      });
+      const subtotalDesp = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+      engine.renderBlock(new ExpensesSubtotalBlock(subtotalDesp));
+      totalGeralDespesas += subtotalDesp;
     }
 
     // 5. Photos
