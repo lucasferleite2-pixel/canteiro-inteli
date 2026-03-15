@@ -380,6 +380,13 @@ const BADGE_COLORS: Record<string, [number, number, number, number, number, numb
   oc_critico:     [255, 210, 210, 160, 20, 20],     // deep red
   oc_risco:       [255, 200, 200, 160, 30, 30],     // risk red
   oc_responsavel: [235, 235, 238, 80, 80, 90],      // neutral
+  // Material-specific
+  mat_tipo:       [225, 232, 248, 45, 75, 145],     // blue-gray
+  mat_unidade:    [235, 235, 238, 80, 80, 90],      // neutral
+  mat_fase:       [230, 240, 250, 50, 80, 140],     // light blue
+  mat_custo:      [235, 245, 235, 40, 100, 50],     // green
+  mat_alerta:     [255, 225, 225, 180, 40, 40],     // red
+  mat_orcamento:  [220, 245, 220, 30, 110, 40],     // green
 };
 
 function getImpactoBadgeKey(impacto: string | null): string | null {
@@ -576,6 +583,101 @@ class OccurrenceBoxBlock implements PdfBlock {
     // Responsible badge
     if (o.responsavel) {
       drawBadge(doc, sanitizeText(o.responsavel), bx, badgeY, "oc_responsavel");
+    }
+
+    // Divider
+    if (!this.isLast) {
+      const divY = y + blockH + 2;
+      doc.setDrawColor(217, 217, 217);
+      doc.setLineWidth(0.3);
+      doc.line(ML + 4, divY, ML + contentW - 4, divY);
+    }
+
+    return y + blockH + (this.isLast ? 4 : 6);
+  }
+}
+
+// ── Material Item Block (Timeline style with badges) ──
+class MaterialItemBlock implements PdfBlock {
+  constructor(private m: any, private isLast: boolean = false) {}
+
+  measure(ctx: LayoutContext): number {
+    const descW = ctx.contentW - HORA_COL_W - 10;
+    ctx.doc.setFontSize(10);
+    const descLines = ctx.doc.splitTextToSize(sanitizeText(this.m.item), descW);
+    const descH = descLines.length * 4.2;
+    const badgeRowH = BADGE_H + 3;
+    const dividerH = this.isLast ? 0 : 4;
+    return Math.max(descH + badgeRowH + 6, 18) + dividerH;
+  }
+
+  render(ctx: LayoutContext, y: number): number {
+    const { doc, contentW } = ctx;
+    const m = this.m;
+    const descX = ML + HORA_COL_W + 8;
+    const descW = contentW - HORA_COL_W - 10;
+
+    // Measure
+    doc.setFontSize(10);
+    const descLines = doc.splitTextToSize(sanitizeText(m.item), descW);
+    const descH = descLines.length * 4.2;
+    const badgeRowH = BADGE_H + 3;
+    const blockH = Math.max(descH + badgeRowH + 6, 18);
+
+    // Background
+    doc.setFillColor(245, 248, 252);
+    doc.roundedRect(ML, y, contentW, blockH, 1.5, 1.5, "F");
+
+    // Timeline dot (blue)
+    doc.setFillColor(60, 100, 180);
+    doc.circle(ML + 4, y + 5.5, TIMELINE_DOT_R, "F");
+
+    // Quantity highlight in left column
+    const qtyText = m.quantidade ? `${m.quantidade}` : "-";
+    const unitText = m.unidade ? ` ${m.unidade}` : "";
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(40, 70, 140);
+    doc.text(qtyText + unitText, ML + 8, y + 6.5);
+
+    // Description
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+    doc.text(descLines, descX, y + 5.5);
+
+    // Badges row
+    const badgeY = y + descH + 4;
+    let bx = descX;
+
+    // Type badge
+    const tipoLabels: Record<string, string> = { material: "Material", equipamento: "Equipamento", mao_de_obra: "Mao de Obra", ferramenta: "Ferramenta" };
+    const tipoLabel = tipoLabels[m.tipo] || m.tipo || "Material";
+    const w1 = drawBadge(doc, tipoLabel, bx, badgeY, "mat_tipo");
+    bx += w1 + BADGE_GAP;
+
+    // Value badge
+    if (m.valor_total && Number(m.valor_total) > 0) {
+      const valLabel = `R$ ${Number(m.valor_total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+      const w2 = drawBadge(doc, valLabel, bx, badgeY, "mat_custo");
+      bx += w2 + BADGE_GAP;
+    }
+
+    // Phase badge
+    if (m.fase_relacionada) {
+      const w3 = drawBadge(doc, sanitizeText(m.fase_relacionada), bx, badgeY, "mat_fase");
+      bx += w3 + BADGE_GAP;
+    }
+
+    // Budget badge
+    if (m.previsto_em_orcamento) {
+      const w4 = drawBadge(doc, "Previsto", bx, badgeY, "mat_orcamento");
+      bx += w4 + BADGE_GAP;
+    }
+
+    // Alert badge
+    if (m.gera_alerta_desequilibrio) {
+      drawBadge(doc, "Alerta desequilibrio", bx, badgeY, "mat_alerta");
     }
 
     // Divider
@@ -1167,6 +1269,7 @@ export async function generateRdoPDF(
     const rdo = sorted[dayIdx];
     const atividades = allAtividades[rdo.id] || [];
     const ocorrencias = allOcorrencias[rdo.id] || [];
+    const materiais = includeMaterials ? (allMateriais[rdo.id] || []) : [];
     const despesas = includeDespesas ? (allDespesas[rdo.id] || []).filter((d: any) => d.incluir_no_pdf) : [];
     const fotos = allFotos[rdo.id] || [];
     const fotoImages = allFotoImages[rdo.id] || [];
@@ -1223,21 +1326,31 @@ export async function generateRdoPDF(
       }
     }
 
-    // 3. Expenses
+    // 3. Materials & Equipment
+    if (includeMaterials && materiais.length > 0) {
+      engine.renderBlock(new SpacerBlock(4));
+      engine.ensureSpace(20);
+      engine.renderBlock(new SubSectionTitleBlock("3. MATERIAIS E EQUIPAMENTOS"));
+      for (let mi = 0; mi < materiais.length; mi++) {
+        engine.renderBlock(new MaterialItemBlock(materiais[mi], mi === materiais.length - 1));
+      }
+    }
+
+    // 4. Expenses
     if (includeDespesas && despesas.length > 0) {
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
-      engine.renderBlock(new SubSectionTitleBlock("3. DESPESAS DO DIA"));
+      engine.renderBlock(new SubSectionTitleBlock("4. DESPESAS DO DIA"));
       const expBlock = new ExpensesTableBlock(despesas);
       engine.renderBlock(expBlock);
       totalGeralDespesas += despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
     }
 
-    // 4. Photos
+    // 5. Photos
     if (includePhotos && fotos.length > 0) {
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
-      engine.renderBlock(new SubSectionTitleBlock("4. REGISTRO FOTOGRAFICO COMENTADO"));
+      engine.renderBlock(new SubSectionTitleBlock("5. REGISTRO FOTOGRAFICO COMENTADO"));
       // Render photos in grid of 2 per row
       for (let fi = 0; fi < fotos.length; fi += 2) {
         const leftEntry: PhotoEntry = {
@@ -1255,10 +1368,10 @@ export async function generateRdoPDF(
       }
     }
 
-    // 5. Technical Synthesis
+    // 6. Technical Synthesis
     engine.renderBlock(new SpacerBlock(4));
     engine.ensureSpace(30);
-    engine.renderBlock(new SubSectionTitleBlock("5. SINTESE TECNICA DO DIA"));
+    engine.renderBlock(new SubSectionTitleBlock("6. SINTESE TECNICA DO DIA"));
 
     const synthParts: string[] = [];
     synthParts.push(`No dia ${fmtDate(rdo.data)}`);
@@ -1266,6 +1379,7 @@ export async function generateRdoPDF(
     if (rdo.fase_obra) synthParts.push(`na fase de ${rdo.fase_obra}`);
     synthParts.push(`com equipe de ${rdo.equipe_total} pessoa(s) e ${rdo.horas_trabalhadas || 0}h trabalhadas`);
     if (ocorrencias.length > 0) synthParts.push(`${ocorrencias.length} ocorrencia(s) relevante(s) registrada(s)`);
+    if (materiais.length > 0) synthParts.push(`${materiais.length} item(ns) de materiais/equipamentos registrado(s)`);
     if (despesas.length > 0) {
       const sub = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
       synthParts.push(`despesas totalizando R$ ${sub.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
