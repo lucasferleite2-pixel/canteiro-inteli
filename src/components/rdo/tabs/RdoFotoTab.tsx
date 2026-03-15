@@ -126,6 +126,7 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
     setPreviews([]);
     setDisplayNames([]);
     setCapturedDates([]);
+    setAutoFilledDates([]);
     setDescricao("");
     setFaseObra("");
     setTagRisco("nenhuma");
