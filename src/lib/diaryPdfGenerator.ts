@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
+import { buildVerificationUrl, saveReportVerification } from "@/lib/reportVerification";
 
 const weatherLabels: Record<string, string> = {
   ensolarado: "Ensolarado",
