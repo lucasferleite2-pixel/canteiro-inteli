@@ -353,39 +353,141 @@ class PlainTableBlock implements PdfBlock {
   }
 }
 
-// ── Activity Item Block (single activity with time + metadata) ──
+// ── Activity Item Block — Professional timeline layout ──
+
+const HORA_COL_W = 18; // fixed width for time column
+const TIMELINE_DOT_R = 1.8;
+const BADGE_FONT = 7.5;
+const BADGE_PAD_H = 5;
+const BADGE_PAD_V = 2;
+const BADGE_H = 10;
+const BADGE_GAP = 3;
+
+// Badge color schemes: [bgR, bgG, bgB, textR, textG, textB]
+const BADGE_COLORS: Record<string, [number, number, number, number, number, number]> = {
+  tipo:           [220, 230, 245, 40, 70, 140],    // blue-gray
+  concluida:      [220, 245, 220, 30, 110, 40],     // green
+  em_andamento:   [235, 235, 238, 80, 80, 90],      // neutral gray
+  impacto_leve:   [255, 248, 220, 150, 120, 20],    // warm yellow
+  impacto_medio:  [255, 237, 213, 180, 100, 20],    // orange
+  impacto_alto:   [255, 225, 225, 180, 40, 40],     // red
+  impacto_critico:[255, 210, 210, 160, 20, 20],     // deep red
+};
+
+function getImpactoBadgeKey(impacto: string | null): string | null {
+  if (!impacto || impacto === "nenhum") return null;
+  const map: Record<string, string> = { leve: "impacto_leve", medio: "impacto_medio", alto: "impacto_alto", critico: "impacto_critico" };
+  return map[impacto] || "impacto_leve";
+}
+
+function drawBadge(doc: jsPDF, text: string, x: number, y: number, colorKey: string): number {
+  const colors = BADGE_COLORS[colorKey] || BADGE_COLORS.tipo;
+  doc.setFontSize(BADGE_FONT);
+  const tw = doc.getTextWidth(text);
+  const bw = tw + BADGE_PAD_H * 2;
+  const bh = BADGE_H;
+  // Background
+  doc.setFillColor(colors[0], colors[1], colors[2]);
+  doc.roundedRect(x, y, bw, bh, 2, 2, "F");
+  // Text
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(colors[3], colors[4], colors[5]);
+  doc.text(text, x + BADGE_PAD_H, y + bh / 2 + 1.2);
+  return bw;
+}
+
 class ActivityItemBlock implements PdfBlock {
-  constructor(private a: any) {}
+  constructor(private a: any, private isLast: boolean = false) {}
 
   measure(ctx: LayoutContext): number {
-    const timePrefix = this.a.hora ? `${this.a.hora} - ` : "";
-    const text = `${timePrefix}${sanitizeText(this.a.descricao)}`;
-    ctx.doc.setFontSize(9);
-    const lines = ctx.doc.splitTextToSize(text, ctx.contentW - 5);
-    return lines.length * 4.2 + 5 + 2; // text + metadata line + spacing
+    const descColW = ctx.contentW - HORA_COL_W - 8;
+    ctx.doc.setFontSize(10);
+    const descLines = ctx.doc.splitTextToSize(sanitizeText(this.a.descricao), descColW);
+    const descH = descLines.length * 4.5;
+    const badgeRowH = BADGE_H + 2;
+    // block padding top(3) + desc + gap(2) + badges + padding bottom(3) + divider(3)
+    return 3 + descH + 2 + badgeRowH + 3 + (this.isLast ? 0 : 3);
   }
 
   render(ctx: LayoutContext, y: number): number {
     const { doc, contentW } = ctx;
     const a = this.a;
-    doc.setFontSize(9);
+    const descColW = contentW - HORA_COL_W - 8;
+    const blockStartY = y;
+
+    // Measure for background
+    doc.setFontSize(10);
+    const descLines = doc.splitTextToSize(sanitizeText(a.descricao), descColW);
+    const descH = descLines.length * 4.5;
+    const badgeRowH = BADGE_H + 2;
+    const innerH = 3 + descH + 2 + badgeRowH + 3;
+
+    // Subtle background
+    doc.setFillColor(248, 249, 252);
+    doc.roundedRect(ML, y, contentW, innerH, 1.5, 1.5, "F");
+
+    y += 3; // top padding
+
+    // ── Timeline dot ──
+    const dotX = ML + 5;
+    const dotY = y + 2;
+    doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+    doc.circle(dotX, dotY, TIMELINE_DOT_R, "F");
+
+    // ── Hora ──
+    const horaX = ML + 10;
+    if (a.hora) {
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+      doc.text(a.hora, horaX, y + 3);
+    }
+
+    // ── Description ──
+    const descX = ML + HORA_COL_W + 8;
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-    const timePrefix = a.hora ? `${a.hora} - ` : "";
-    const text = `${timePrefix}${sanitizeText(a.descricao)}`;
-    const lines = doc.splitTextToSize(text, contentW - 5);
-    doc.text(lines, ML + 3, y);
-    y += lines.length * 4.2;
+    doc.text(descLines, descX, y + 3);
+    y += descH + 2;
 
-    doc.setFontSize(7);
-    doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-    const statusParts = [
-      `Tipo: ${a.tipo_atividade}`,
-      a.concluida ? "[OK] Concluida" : "[-] Em andamento",
-      a.impacto_cronograma && a.impacto_cronograma !== "nenhum" ? `Impacto: ${a.impacto_cronograma}` : null,
-    ].filter(Boolean).join("  |  ");
-    doc.text(statusParts, ML + 6, y);
-    return y + 5;
+    // ── Badges row ──
+    let bx = descX;
+    const badgeY = y;
+
+    // Type badge
+    if (a.tipo_atividade) {
+      const w = drawBadge(doc, sanitizeText(a.tipo_atividade), bx, badgeY, "tipo");
+      bx += w + BADGE_GAP;
+    }
+
+    // Status badge
+    if (a.concluida) {
+      const w = drawBadge(doc, "Concluida", bx, badgeY, "concluida");
+      bx += w + BADGE_GAP;
+    } else {
+      const w = drawBadge(doc, "Em andamento", bx, badgeY, "em_andamento");
+      bx += w + BADGE_GAP;
+    }
+
+    // Impact badge
+    const impKey = getImpactoBadgeKey(a.impacto_cronograma);
+    if (impKey) {
+      const label = `Impacto ${a.impacto_cronograma}`;
+      drawBadge(doc, label, bx, badgeY, impKey);
+    }
+
+    y = blockStartY + innerH;
+
+    // ── Divider ──
+    if (!this.isLast) {
+      doc.setDrawColor(217, 217, 217);
+      doc.setLineWidth(0.3);
+      doc.line(ML + 10, y + 1.5, ML + contentW - 10, y + 1.5);
+      y += 3;
+    }
+
+    return y;
   }
 }
 
@@ -1047,8 +1149,8 @@ export async function generateRdoPDF(
       engine.renderBlock(new SubSectionTitleBlock("1. ATIVIDADES EXECUTADAS"));
       if (atividades.length > 0) {
         const sortedAtiv = [...atividades].sort((a: any, b: any) => (a.hora || "99:99").localeCompare(b.hora || "99:99"));
-        for (const a of sortedAtiv) {
-          const block = new ActivityItemBlock(a);
+        for (let ai = 0; ai < sortedAtiv.length; ai++) {
+          const block = new ActivityItemBlock(sortedAtiv[ai], ai === sortedAtiv.length - 1);
           engine.renderBlock(block);
         }
       } else {
