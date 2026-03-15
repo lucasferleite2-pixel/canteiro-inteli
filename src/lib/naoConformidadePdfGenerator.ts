@@ -111,6 +111,7 @@ export interface NcPdfOptions {
   items: NcItem[];
   additionalNorms?: string;
   conclusions?: string;
+  companyId?: string;
 }
 
 const SEVERITY_LABELS: Record<NcSeverity, string> = {
