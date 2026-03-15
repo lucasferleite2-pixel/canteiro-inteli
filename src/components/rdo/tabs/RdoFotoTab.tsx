@@ -47,6 +47,7 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
   const [faseObra, setFaseObra] = useState("");
   const [tagRisco, setTagRisco] = useState("nenhuma");
   const [uploading, setUploading] = useState(false);
+  const [autoFilledDates, setAutoFilledDates] = useState<boolean[]>([]);
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
