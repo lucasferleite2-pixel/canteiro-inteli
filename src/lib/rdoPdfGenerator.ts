@@ -1098,7 +1098,7 @@ export async function generateRdoPDF(
     project_name: projectName,
     company_name: companyName,
     company_id: companyId,
-    project_id: rdos.length > 0 ? rdos[0].obra_id : undefined,
+    project_id: undefined,
     generated_by: userName,
     integrity_hash: integrityHash,
     short_hash: shortHash,
