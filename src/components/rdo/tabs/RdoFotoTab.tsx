@@ -116,6 +116,7 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit }: Props) {
     setPreviews(files.map((f) => URL.createObjectURL(f)));
     setDisplayNames(files.map((f) => f.name.replace(/\.[^/.]+$/, "")));
     setCapturedDates(files.map(() => new Date()));
+    setAutoFilledDates(files.map(() => true));
     setShowUpload(true);
   };
 
