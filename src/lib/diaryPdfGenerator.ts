@@ -168,14 +168,22 @@ export async function generateDiaryPDF(
 
   // QR Code
   onProgress?.("Gerando QR Code...");
-  const qrContent = JSON.stringify({
-    id: reportId,
-    hash: shortHash,
-    project: projectName,
-    entries: entries.length,
-    generated: now.toISOString(),
+  const verificationUrl = buildVerificationUrl(reportId);
+  const qrDataUrl = await generateQRDataUrl(verificationUrl);
+
+  // Save verification record
+  await saveReportVerification({
+    report_id: reportId,
+    report_type: "diary",
+    project_name: projectName,
+    company_name: companyName,
+    company_id: companyId,
+    generated_by: userName,
+    integrity_hash: integrityHash,
+    short_hash: shortHash,
+    entries_count: entries.length,
+    technical_responsible: technicalResponsible,
   });
-  const qrDataUrl = await generateQRDataUrl(qrContent);
 
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();

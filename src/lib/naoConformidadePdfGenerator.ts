@@ -264,7 +264,24 @@ export async function generateNaoConformidadePDF(
   const integrityHash = await computeHash(JSON.stringify({ reportId, projectName, generated: now.toISOString(), items: items.length }));
   const shortHash = integrityHash.substring(0, 16).toUpperCase();
   onProgress?.("Gerando QR Code...");
-  const qrDataUrl = await generateQR(JSON.stringify({ id: reportId, hash: shortHash, project: projectName, nc_items: items.length, generated: now.toISOString() }));
+  const verificationUrl = buildVerificationUrl(reportId);
+  const qrDataUrl = await generateQR(verificationUrl);
+
+  // Save verification record if companyId available
+  if (options.companyId) {
+    await saveReportVerification({
+      report_id: reportId,
+      report_type: "nc",
+      project_name: projectName,
+      company_name: companyName,
+      company_id: options.companyId,
+      generated_by: userName,
+      integrity_hash: integrityHash,
+      short_hash: shortHash,
+      entries_count: items.length,
+      technical_responsible: technicalResponsible,
+    });
+  }
 
   const bookmarks: { title: string; page: number }[] = [];
   function trackSection(title: string) {
