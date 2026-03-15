@@ -597,6 +597,101 @@ class OccurrenceBoxBlock implements PdfBlock {
   }
 }
 
+// ── Material Item Block (Timeline style with badges) ──
+class MaterialItemBlock implements PdfBlock {
+  constructor(private m: any, private isLast: boolean = false) {}
+
+  measure(ctx: LayoutContext): number {
+    const descW = ctx.contentW - HORA_COL_W - 10;
+    ctx.doc.setFontSize(10);
+    const descLines = ctx.doc.splitTextToSize(sanitizeText(this.m.item), descW);
+    const descH = descLines.length * 4.2;
+    const badgeRowH = BADGE_H + 3;
+    const dividerH = this.isLast ? 0 : 4;
+    return Math.max(descH + badgeRowH + 6, 18) + dividerH;
+  }
+
+  render(ctx: LayoutContext, y: number): number {
+    const { doc, contentW } = ctx;
+    const m = this.m;
+    const descX = ML + HORA_COL_W + 8;
+    const descW = contentW - HORA_COL_W - 10;
+
+    // Measure
+    doc.setFontSize(10);
+    const descLines = doc.splitTextToSize(sanitizeText(m.item), descW);
+    const descH = descLines.length * 4.2;
+    const badgeRowH = BADGE_H + 3;
+    const blockH = Math.max(descH + badgeRowH + 6, 18);
+
+    // Background
+    doc.setFillColor(245, 248, 252);
+    doc.roundedRect(ML, y, contentW, blockH, 1.5, 1.5, "F");
+
+    // Timeline dot (blue)
+    doc.setFillColor(60, 100, 180);
+    doc.circle(ML + 4, y + 5.5, TIMELINE_DOT_R, "F");
+
+    // Quantity highlight in left column
+    const qtyText = m.quantidade ? `${m.quantidade}` : "-";
+    const unitText = m.unidade ? ` ${m.unidade}` : "";
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(40, 70, 140);
+    doc.text(qtyText + unitText, ML + 8, y + 6.5);
+
+    // Description
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
+    doc.text(descLines, descX, y + 5.5);
+
+    // Badges row
+    const badgeY = y + descH + 4;
+    let bx = descX;
+
+    // Type badge
+    const tipoLabels: Record<string, string> = { material: "Material", equipamento: "Equipamento", mao_de_obra: "Mao de Obra", ferramenta: "Ferramenta" };
+    const tipoLabel = tipoLabels[m.tipo] || m.tipo || "Material";
+    const w1 = drawBadge(doc, tipoLabel, bx, badgeY, "mat_tipo");
+    bx += w1 + BADGE_GAP;
+
+    // Value badge
+    if (m.valor_total && Number(m.valor_total) > 0) {
+      const valLabel = `R$ ${Number(m.valor_total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+      const w2 = drawBadge(doc, valLabel, bx, badgeY, "mat_custo");
+      bx += w2 + BADGE_GAP;
+    }
+
+    // Phase badge
+    if (m.fase_relacionada) {
+      const w3 = drawBadge(doc, sanitizeText(m.fase_relacionada), bx, badgeY, "mat_fase");
+      bx += w3 + BADGE_GAP;
+    }
+
+    // Budget badge
+    if (m.previsto_em_orcamento) {
+      const w4 = drawBadge(doc, "Previsto", bx, badgeY, "mat_orcamento");
+      bx += w4 + BADGE_GAP;
+    }
+
+    // Alert badge
+    if (m.gera_alerta_desequilibrio) {
+      drawBadge(doc, "Alerta desequilibrio", bx, badgeY, "mat_alerta");
+    }
+
+    // Divider
+    if (!this.isLast) {
+      const divY = y + blockH + 2;
+      doc.setDrawColor(217, 217, 217);
+      doc.setLineWidth(0.3);
+      doc.line(ML + 4, divY, ML + contentW - 4, divY);
+    }
+
+    return y + blockH + (this.isLast ? 4 : 6);
+  }
+}
+
 // ── Photo Grid Block (2 photos per row) ──
 
 interface PhotoEntry {
