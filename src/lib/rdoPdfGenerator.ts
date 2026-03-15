@@ -813,105 +813,99 @@ class PhotoGridBlock implements PdfBlock {
   }
 }
 
-// ── Expenses Table Block (subtotal included) ──
-class ExpenseItemBlock implements PdfBlock {
-  private tipoLabels: Record<string, string> = { material: "Material", mao_de_obra: "Mao de Obra", equipamento: "Equipamento", transporte: "Transporte", outro: "Outro" };
-  constructor(private d: any, private isLast: boolean = false) {}
+// ── Expenses Table Block (autoTable-based) ──
+class ExpensesTableBlock implements PdfBlock {
+  private tipoLabels: Record<string, string> = {
+    material: "Material", mao_de_obra: "Mao de Obra", equipamento: "Equipamento",
+    transporte: "Transporte", outro: "Outro",
+  };
+
+  constructor(private despesas: any[], private subtotal: number, private totalAcumulado: number) {}
 
   measure(ctx: LayoutContext): number {
-    const descColW = ctx.contentW - HORA_COL_W - 8;
-    ctx.doc.setFontSize(10);
-    const descLines = ctx.doc.splitTextToSize(sanitizeText(this.d.descricao), descColW);
-    const descH = descLines.length * 4.5;
-    return Math.max(descH + BADGE_H + 12, 18) + (this.isLast ? 0 : 3);
+    // Estimate: header + rows + subtotal/total lines
+    return Math.min(14 + this.despesas.length * 8 + 16, 60);
   }
 
   render(ctx: LayoutContext, y: number): number {
     const { doc, contentW } = ctx;
-    const d = this.d;
-    const blockH = this.measure(ctx) - (this.isLast ? 0 : 3);
-    const descColW = contentW - HORA_COL_W - 8;
+    const fmtMoney = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-    // Soft background
-    doc.setFillColor(248, 249, 252);
-    doc.roundedRect(ML, y, contentW, blockH, 1.5, 1.5, "F");
+    const head = [["Descricao", "Tipo", "Qtd", "Unid.", "V.Unit.", "V.Total", "Classif.", "Orcamento"]];
+    const body = this.despesas.map((d: any) => [
+      sanitizeText(d.descricao || ""),
+      this.tipoLabels[d.tipo] || d.tipo || "",
+      Number(d.quantidade || 0).toLocaleString("pt-BR"),
+      d.unidade || "un",
+      fmtMoney(Number(d.valor_unitario || 0)),
+      fmtMoney(Number(d.valor_total || 0)),
+      d.centro_custo || "-",
+      d.previsto_no_orcamento ? "Previsto" : "Nao previsto",
+    ]);
 
-    // Timeline dot (green for money)
-    doc.setFillColor(40, 160, 80);
-    doc.circle(ML + HORA_COL_W / 2, y + 6, TIMELINE_DOT_R, "F");
+    autoTable(doc, {
+      startY: y,
+      margin: { left: ML, right: MR },
+      head,
+      body,
+      theme: "grid",
+      headStyles: {
+        fillColor: BLUE_TECH,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 8,
+        halign: "center",
+        cellPadding: 2,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: DARK_TEXT,
+        cellPadding: 1.8,
+        lineColor: [220, 220, 220],
+        lineWidth: 0.2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 249, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: "auto", halign: "left" },
+        1: { cellWidth: 22, halign: "center" },
+        2: { cellWidth: 12, halign: "right" },
+        3: { cellWidth: 12, halign: "center" },
+        4: { cellWidth: 22, halign: "right" },
+        5: { cellWidth: 22, halign: "right" },
+        6: { cellWidth: 20, halign: "center" },
+        7: { cellWidth: 22, halign: "center" },
+      },
+      didParseCell: (data: any) => {
+        // Bold the V.Total column
+        if (data.section === "body" && data.column.index === 5) {
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
 
-    // Value in left column (bold, green)
-    const valorTotal = Number(d.valor_total || 0);
-    const valorStr = `R$ ${valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    let finalY = (doc as any).lastAutoTable?.finalY || y + 30;
+
+    // Subtotal row
+    finalY += 3;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.setTextColor(30, 120, 50);
-    doc.text(valorStr, ML + 4, y + 6.5);
-
-    // Description
-    const descX = ML + HORA_COL_W + 8;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
     doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-    const descLines = doc.splitTextToSize(sanitizeText(d.descricao), descColW);
-    doc.text(descLines, descX, y + 6);
-    const descH = descLines.length * 4.5;
+    doc.text(`Subtotal do dia:`, ML, finalY + 4);
+    doc.text(fmtMoney(this.subtotal), ML + contentW, finalY + 4, { align: "right" });
 
-    // Badges row
-    const badgeY = y + descH + 7;
-    let bx = descX;
-
-    // Tipo badge
-    const tipoLabel = this.tipoLabels[d.tipo] || d.tipo;
-    bx += drawBadge(doc, tipoLabel, bx, badgeY, "desp_tipo") + 3;
-
-    // Quantity + unit
-    const qtdStr = `${Number(d.quantidade || 0).toLocaleString("pt-BR")} ${d.unidade || "un"}`;
-    bx += drawBadge(doc, qtdStr, bx, badgeY, "desp_curva") + 3;
-
-    // Unit value
-    const vuStr = `Unit: R$ ${Number(d.valor_unitario || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-    bx += drawBadge(doc, vuStr, bx, badgeY, "desp_valor") + 3;
-
-    // Budget badge
-    if (d.previsto_no_orcamento) {
-      bx += drawBadge(doc, "Previsto", bx, badgeY, "desp_previsto") + 3;
-    } else {
-      bx += drawBadge(doc, "Nao previsto", bx, badgeY, "desp_nao_prev") + 3;
-    }
-
-    // Centro de custo
-    if (d.centro_custo) {
-      bx += drawBadge(doc, `CC: ${d.centro_custo}`, bx, badgeY, "desp_custo") + 3;
-    }
-
-    // Afeta curva financeira
-    if (d.afeta_curva_financeira) {
-      bx += drawBadge(doc, "Curva financeira", bx, badgeY, "desp_curva") + 3;
-    }
-
-    // Divider
-    if (!this.isLast) {
-      const divY = y + blockH + 1;
-      doc.setDrawColor(217, 217, 217);
-      doc.setLineWidth(0.3);
-      doc.line(ML + 4, divY, ML + contentW - 4, divY);
-    }
-
-    return y + blockH + (this.isLast ? 0 : 3);
-  }
-}
-
-class ExpensesSubtotalBlock implements PdfBlock {
-  constructor(private subtotal: number) {}
-  measure(): number { return 10; }
-  render(ctx: LayoutContext, y: number): number {
-    const { doc } = ctx;
-    doc.setFontSize(9);
+    // Total acumulado
+    finalY += 7;
+    doc.setFillColor(GRAY_LIGHT[0], GRAY_LIGHT[1], GRAY_LIGHT[2]);
+    doc.roundedRect(ML, finalY, contentW, 8, 1, 1, "F");
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-    doc.text(`Subtotal do dia: R$ ${this.subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ML, y + 5);
-    return y + 10;
+    doc.setFontSize(9);
+    doc.setTextColor(BLUE_TECH[0], BLUE_TECH[1], BLUE_TECH[2]);
+    doc.text(`Total acumulado:`, ML + 3, finalY + 5.5);
+    doc.text(fmtMoney(this.totalAcumulado), ML + contentW - 3, finalY + 5.5, { align: "right" });
+
+    return finalY + 12;
   }
 }
 
