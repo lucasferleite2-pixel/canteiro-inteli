@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import QRCode from "qrcode";
+import { buildVerificationUrl, saveReportVerification } from "@/lib/reportVerification";
 
 // ── Design Constants ──
 const BLUE_TECH: [number, number, number] = [15, 47, 87];
