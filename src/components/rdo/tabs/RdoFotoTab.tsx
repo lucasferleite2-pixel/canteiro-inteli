@@ -22,6 +22,7 @@ interface Props {
   rdoDiaId: string;
   companyId: string;
   canEdit: boolean;
+  rdoDate?: string;
 }
 
 const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Instalações", "Acabamento", "Cobertura", "Infraestrutura", "Paisagismo"];
