@@ -65,6 +65,7 @@ const App = () => (
               <Route path="/comparativo" element={<Comparativo />} />
               <Route path="/planejamento" element={<PlanejamentoFases />} />
             </Route>
+            <Route path="/verificar/:documentId" element={<VerificarDocumento />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
