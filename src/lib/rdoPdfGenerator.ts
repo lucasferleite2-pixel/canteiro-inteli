@@ -1218,8 +1218,8 @@ export async function generateRdoPDF(
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
       engine.renderBlock(new SubSectionTitleBlock("2. OCORRENCIAS E FATOS RELEVANTES"));
-      for (const o of ocorrencias) {
-        engine.renderBlock(new OccurrenceBoxBlock(o));
+      for (let oi = 0; oi < ocorrencias.length; oi++) {
+        engine.renderBlock(new OccurrenceBoxBlock(ocorrencias[oi], oi === ocorrencias.length - 1));
       }
     }
 
