@@ -372,6 +372,14 @@ const BADGE_COLORS: Record<string, [number, number, number, number, number, numb
   impacto_medio:  [255, 237, 213, 180, 100, 20],    // orange
   impacto_alto:   [255, 225, 225, 180, 40, 40],     // red
   impacto_critico:[255, 210, 210, 160, 20, 20],     // deep red
+  // Occurrence-specific
+  oc_tipo:        [225, 232, 248, 45, 75, 145],     // blue-gray for occurrence type
+  oc_baixo:       [220, 245, 220, 30, 110, 40],     // green
+  oc_medio:       [255, 237, 213, 180, 100, 20],    // orange
+  oc_alto:        [255, 225, 225, 180, 40, 40],     // red
+  oc_critico:     [255, 210, 210, 160, 20, 20],     // deep red
+  oc_risco:       [255, 200, 200, 160, 30, 30],     // risk red
+  oc_responsavel: [235, 235, 238, 80, 80, 90],      // neutral
 };
 
 function getImpactoBadgeKey(impacto: string | null): string | null {
@@ -491,47 +499,94 @@ class ActivityItemBlock implements PdfBlock {
   }
 }
 
-// ── Occurrence Box Block ──
+// ── Occurrence Box Block (Timeline style with badges) ──
+function getOcImpactoBadgeKey(impacto: string | null | undefined): string {
+  const map: Record<string, string> = { baixo: "oc_baixo", "médio": "oc_medio", medio: "oc_medio", alto: "oc_alto", "crítico": "oc_critico", critico: "oc_critico" };
+  return map[(impacto || "baixo").toLowerCase()] || "oc_baixo";
+}
+
 class OccurrenceBoxBlock implements PdfBlock {
-  constructor(private o: any) {}
+  constructor(private o: any, private isLast: boolean = false) {}
 
   measure(ctx: LayoutContext): number {
-    ctx.doc.setFontSize(9);
-    const descLines = ctx.doc.splitTextToSize(sanitizeText(this.o.descricao), ctx.contentW - 16);
-    return 14 + descLines.length * 4 + 6;
+    const descW = ctx.contentW - HORA_COL_W - 10;
+    ctx.doc.setFontSize(10);
+    const descLines = ctx.doc.splitTextToSize(sanitizeText(this.o.descricao), descW);
+    const descH = descLines.length * 4.2;
+    const badgeRowH = BADGE_H + 3;
+    const dividerH = this.isLast ? 0 : 4;
+    return Math.max(descH + badgeRowH + 6, 18) + dividerH;
   }
 
   render(ctx: LayoutContext, y: number): number {
     const { doc, contentW } = ctx;
     const o = this.o;
+    const descX = ML + HORA_COL_W + 8;
+    const descW = contentW - HORA_COL_W - 10;
 
-    doc.setFillColor(WARN_BG[0], WARN_BG[1], WARN_BG[2]);
-    doc.setDrawColor(WARN_BORDER[0], WARN_BORDER[1], WARN_BORDER[2]);
-    doc.setLineWidth(0.5);
+    // Measure
+    doc.setFontSize(10);
+    const descLines = doc.splitTextToSize(sanitizeText(o.descricao), descW);
+    const descH = descLines.length * 4.2;
+    const badgeRowH = BADGE_H + 3;
+    const blockH = Math.max(descH + badgeRowH + 6, 18);
 
+    // Background
+    doc.setFillColor(248, 245, 240);
+    doc.roundedRect(ML, y, contentW, blockH, 1.5, 1.5, "F");
+
+    // Timeline dot (orange/warning)
+    doc.setFillColor(220, 160, 40);
+    doc.circle(ML + 4, y + 5.5, TIMELINE_DOT_R, "F");
+
+    // Icon marker
     doc.setFontSize(9);
-    const descLines = doc.splitTextToSize(sanitizeText(o.descricao), contentW - 16);
-    const boxH = 14 + descLines.length * 4;
-    doc.roundedRect(ML, y, contentW, boxH, 1, 1, "FD");
-
-    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(180, 120, 0);
-    doc.text("[!] OCORRENCIA TECNICA REGISTRADA", ML + 4, y + 5);
+    doc.setTextColor(200, 130, 20);
+    doc.text("[!]", ML + 8, y + 6.5);
 
-    doc.setFontSize(7);
+    // Description
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(GRAY_TEXT[0], GRAY_TEXT[1], GRAY_TEXT[2]);
-    const meta = [`Tipo: ${o.tipo_ocorrencia}`, `Impacto: ${o.impacto || "baixo"}`];
-    if (o.responsavel) meta.push(`Responsavel: ${sanitizeText(o.responsavel)}`);
-    if (o.gera_risco_contratual) meta.push("[!] RISCO CONTRATUAL");
-    doc.text(meta.join("  |  "), ML + 4, y + 10);
-
-    doc.setFontSize(9);
     doc.setTextColor(DARK_TEXT[0], DARK_TEXT[1], DARK_TEXT[2]);
-    doc.text(descLines, ML + 4, y + 16);
+    doc.text(descLines, descX, y + 5.5);
 
-    return y + boxH + 6;
+    // Badges row
+    const badgeY = y + descH + 4;
+    let bx = descX;
+
+    // Type badge
+    if (o.tipo_ocorrencia) {
+      const w = drawBadge(doc, sanitizeText(o.tipo_ocorrencia), bx, badgeY, "oc_tipo");
+      bx += w + BADGE_GAP;
+    }
+
+    // Impact badge
+    const impKey = getOcImpactoBadgeKey(o.impacto);
+    const impLabel = `Impacto ${(o.impacto || "baixo")}`;
+    const w2 = drawBadge(doc, impLabel, bx, badgeY, impKey);
+    bx += w2 + BADGE_GAP;
+
+    // Contractual risk badge
+    if (o.gera_risco_contratual) {
+      const w3 = drawBadge(doc, "Risco contratual", bx, badgeY, "oc_risco");
+      bx += w3 + BADGE_GAP;
+    }
+
+    // Responsible badge
+    if (o.responsavel) {
+      drawBadge(doc, sanitizeText(o.responsavel), bx, badgeY, "oc_responsavel");
+    }
+
+    // Divider
+    if (!this.isLast) {
+      const divY = y + blockH + 2;
+      doc.setDrawColor(217, 217, 217);
+      doc.setLineWidth(0.3);
+      doc.line(ML + 4, divY, ML + contentW - 4, divY);
+    }
+
+    return y + blockH + (this.isLast ? 4 : 6);
   }
 }
 
@@ -1163,8 +1218,8 @@ export async function generateRdoPDF(
       engine.renderBlock(new SpacerBlock(4));
       engine.ensureSpace(20);
       engine.renderBlock(new SubSectionTitleBlock("2. OCORRENCIAS E FATOS RELEVANTES"));
-      for (const o of ocorrencias) {
-        engine.renderBlock(new OccurrenceBoxBlock(o));
+      for (let oi = 0; oi < ocorrencias.length; oi++) {
+        engine.renderBlock(new OccurrenceBoxBlock(ocorrencias[oi], oi === ocorrencias.length - 1));
       }
     }
 
