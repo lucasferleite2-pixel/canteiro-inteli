@@ -219,7 +219,7 @@ export function RdoSmartCard({ rdo, companyId, canModify, isAuthor, onEdit, onDe
                 <RdoDespesaTab rdoDiaId={rdo.id} companyId={companyId} canEdit={canModify} />
               </TabsContent>
               <TabsContent value="fotos" className="mt-3">
-                <RdoFotoTab rdoDiaId={rdo.id} companyId={companyId} canEdit={canModify} />
+                <RdoFotoTab rdoDiaId={rdo.id} companyId={companyId} canEdit={canModify} rdoDate={rdo.data} />
               </TabsContent>
               <TabsContent value="risco" className="mt-3">
                 <RdoRiscoTab rdoDiaId={rdo.id} companyId={companyId} rdo={rdo} />

@@ -116,8 +116,9 @@ export function RdoFotoTab({ rdoDiaId, companyId, canEdit, rdoDate }: Props) {
     setSelectedFiles(files);
     setPreviews(files.map((f) => URL.createObjectURL(f)));
     setDisplayNames(files.map((f) => f.name.replace(/\.[^/.]+$/, "")));
-    setCapturedDates(files.map(() => new Date()));
-    setAutoFilledDates(files.map(() => true));
+    const defaultDate = rdoDate ? new Date(rdoDate + "T12:00:00") : new Date();
+    setCapturedDates(files.map(() => defaultDate));
+    setAutoFilledDates(files.map(() => false));
     setShowUpload(true);
   };
 
