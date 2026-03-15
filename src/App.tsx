@@ -21,6 +21,7 @@ import PlanejamentoFases from "@/pages/PlanejamentoFases";
 import Auth from "@/pages/Auth";
 import CompanySetup from "@/pages/CompanySetup";
 import NotFound from "./pages/NotFound";
+import VerificarDocumento from "@/pages/VerificarDocumento";
 
 const queryClient = new QueryClient();
 
