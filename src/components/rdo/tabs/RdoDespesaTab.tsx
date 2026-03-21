@@ -123,7 +123,6 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
         quantidade: qtd,
         unidade: form.unidade || "un",
         valor_unitario: vu,
-        valor_total: qtd * vu,
         centro_custo: form.centro_custo || null,
         previsto_no_orcamento: form.previsto_no_orcamento,
         incluir_no_pdf: form.incluir_no_pdf,
