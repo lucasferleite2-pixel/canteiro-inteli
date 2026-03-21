@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Loader2, Trash2, AlertTriangle, DollarSign } from "lucide-react";
+import { Plus, Loader2, Trash2, AlertTriangle, DollarSign, Pencil, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { DEMO_DESPESAS } from "@/lib/demoData";
@@ -31,6 +31,19 @@ const tipoLabels: Record<string, string> = {
   outro: "Outro",
 };
 
+const emptyForm = {
+  tipo: "material",
+  descricao: "",
+  quantidade: "",
+  unidade: "un",
+  valor_unitario: "",
+  centro_custo: "",
+  previsto_no_orcamento: true,
+  incluir_no_pdf: true,
+  afeta_curva_financeira: true,
+  observacao: "",
+};
+
 interface Props {
   rdoDiaId: string;
   companyId: string;
@@ -43,18 +56,8 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { isDemo, user } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    tipo: "material",
-    descricao: "",
-    quantidade: "",
-    unidade: "un",
-    valor_unitario: "",
-    centro_custo: "",
-    previsto_no_orcamento: true,
-    incluir_no_pdf: true,
-    afeta_curva_financeira: true,
-    observacao: "",
-  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...emptyForm });
 
   const { data: despesas = [], isLoading } = useQuery({
     queryKey: ["rdo_despesa_item", rdoDiaId],
@@ -69,6 +72,12 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
       return data;
     },
   });
+
+  const resetForm = () => {
+    setForm({ ...emptyForm });
+    setShowForm(false);
+    setEditingId(null);
+  };
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -95,13 +104,38 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rdo_despesa_item", rdoDiaId] });
-      setForm({
-        tipo: "material", descricao: "", quantidade: "", unidade: "un",
-        valor_unitario: "", centro_custo: "", previsto_no_orcamento: true,
-        incluir_no_pdf: true, afeta_curva_financeira: true, observacao: "",
-      });
-      setShowForm(false);
+      resetForm();
       toast({ title: "Despesa adicionada!" });
+    },
+    onError: (e: any) => toast({ variant: "destructive", title: "Erro", description: e.message }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      if (!form.descricao.trim()) throw new Error("Descrição obrigatória");
+      const qtd = parseFloat(form.quantidade) || 0;
+      const vu = parseFloat(form.valor_unitario) || 0;
+      if (qtd <= 0 || vu <= 0) throw new Error("Quantidade e valor unitário devem ser maiores que zero");
+      const { error } = await supabase.from("rdo_despesa_item").update({
+        tipo: form.tipo,
+        descricao: form.descricao.trim(),
+        quantidade: qtd,
+        unidade: form.unidade || "un",
+        valor_unitario: vu,
+        valor_total: qtd * vu,
+        centro_custo: form.centro_custo || null,
+        previsto_no_orcamento: form.previsto_no_orcamento,
+        incluir_no_pdf: form.incluir_no_pdf,
+        afeta_curva_financeira: form.afeta_curva_financeira,
+        observacao: form.observacao || null,
+      }).eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rdo_despesa_item", rdoDiaId] });
+      resetForm();
+      toast({ title: "Despesa atualizada!" });
     },
     onError: (e: any) => toast({ variant: "destructive", title: "Erro", description: e.message }),
   });
@@ -117,6 +151,23 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
     },
   });
 
+  const startEdit = (d: any) => {
+    setEditingId(d.id);
+    setForm({
+      tipo: d.tipo,
+      descricao: d.descricao,
+      quantidade: String(d.quantidade),
+      unidade: d.unidade || "un",
+      valor_unitario: String(d.valor_unitario),
+      centro_custo: d.centro_custo || "",
+      previsto_no_orcamento: d.previsto_no_orcamento ?? true,
+      incluir_no_pdf: d.incluir_no_pdf ?? true,
+      afeta_curva_financeira: d.afeta_curva_financeira ?? true,
+      observacao: d.observacao || "",
+    });
+    setShowForm(true);
+  };
+
   const totalDia = despesas.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
   const totalNaoPrevisto = despesas
     .filter((d: any) => !d.previsto_no_orcamento)
@@ -126,6 +177,9 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
     .reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
 
   if (isLoading) return <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+
+  const isEditing = !!editingId;
+  const isSaving = isEditing ? updateMutation.isPending : addMutation.isPending;
 
   return (
     <div className="space-y-3">
@@ -141,12 +195,12 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
                   <TableHead className="text-xs text-right">Unit.</TableHead>
                   <TableHead className="text-xs text-right">Total</TableHead>
                   <TableHead className="text-xs text-center">PDF</TableHead>
-                  <TableHead className="text-xs w-8"></TableHead>
+                  <TableHead className="text-xs w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {despesas.map((d: any) => (
-                  <TableRow key={d.id}>
+                  <TableRow key={d.id} className={editingId === d.id ? "bg-primary/5" : ""}>
                     <TableCell className="text-xs">
                       <div className="flex items-center gap-1">
                         {!d.previsto_no_orcamento && <AlertTriangle className="h-3 w-3 text-orange-500 shrink-0" />}
@@ -164,9 +218,14 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
                     </TableCell>
                     <TableCell>
                       {canEdit && !isDemo && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteMutation.mutate(d.id)}>
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
+                        <div className="flex gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(d)}>
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteMutation.mutate(d.id)}>
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -197,6 +256,14 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
 
       {showForm && (
         <div className="space-y-2 p-3 rounded-md border bg-muted/30">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">{isEditing ? "Editar despesa" : "Nova despesa"}</span>
+            {isEditing && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetForm}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
           <Input placeholder="Descrição da despesa..." value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
@@ -226,16 +293,17 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
           </div>
           <Textarea placeholder="Observação (opcional)" className="text-xs min-h-[60px]" value={form.observacao} onChange={(e) => setForm({ ...form, observacao: e.target.value })} />
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>
-              {addMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Salvar
+            <Button size="sm" onClick={() => isEditing ? updateMutation.mutate() : addMutation.mutate()} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              {isEditing ? "Atualizar" : "Salvar"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <Button size="sm" variant="ghost" onClick={resetForm}>Cancelar</Button>
           </div>
         </div>
       )}
 
       {canEdit && !showForm && (
-        <Button variant="outline" size="sm" className="w-full" onClick={() => setShowForm(true)}>
+        <Button variant="outline" size="sm" className="w-full" onClick={() => { resetForm(); setShowForm(true); }}>
           <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar Despesa
         </Button>
       )}

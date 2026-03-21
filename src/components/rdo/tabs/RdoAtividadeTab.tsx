@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Loader2, Trash2, Clock } from "lucide-react";
+import { Plus, Loader2, Trash2, Clock, Pencil, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { DEMO_ATIVIDADES } from "@/lib/demoData";
@@ -30,15 +30,15 @@ function getCurrentTime() {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
+const emptyForm = { hora: "", desc: "", tipo: "Execução", impacto: "nenhum" };
+
 export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { toast } = useToast();
   const { isDemo } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [hora, setHora] = useState("");
-  const [desc, setDesc] = useState("");
-  const [tipo, setTipo] = useState("Execução");
-  const [impacto, setImpacto] = useState("nenhum");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...emptyForm });
 
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ["rdo_atividade", rdoDiaId],
@@ -54,32 +54,59 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
     },
   });
 
-  // Sort by hora field
   const sortedAtividades = [...atividades].sort((a: any, b: any) => {
     const ha = a.hora || "99:99";
     const hb = b.hora || "99:99";
     return ha.localeCompare(hb);
   });
 
+  const resetForm = () => {
+    setForm({ ...emptyForm });
+    setShowForm(false);
+    setEditingId(null);
+  };
+
   const addMutation = useMutation({
     mutationFn: async () => {
-      if (!hora.trim()) throw new Error("Horário obrigatório");
-      if (!desc.trim()) throw new Error("Descrição obrigatória");
-      if (!/^\d{2}:\d{2}$/.test(hora.trim())) throw new Error("Formato de hora inválido (HH:MM)");
+      if (!form.hora.trim()) throw new Error("Horário obrigatório");
+      if (!form.desc.trim()) throw new Error("Descrição obrigatória");
+      if (!/^\d{2}:\d{2}$/.test(form.hora.trim())) throw new Error("Formato de hora inválido (HH:MM)");
       const { error } = await supabase.from("rdo_atividade").insert({
         rdo_dia_id: rdoDiaId,
         company_id: companyId,
-        hora: hora.trim(),
-        descricao: desc.trim(),
-        tipo_atividade: tipo,
-        impacto_cronograma: impacto,
+        hora: form.hora.trim(),
+        descricao: form.desc.trim(),
+        tipo_atividade: form.tipo,
+        impacto_cronograma: form.impacto,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rdo_atividade", rdoDiaId] });
-      setDesc(""); setHora(""); setShowForm(false);
+      resetForm();
       toast({ title: "Atividade adicionada!" });
+    },
+    onError: (e: any) => toast({ variant: "destructive", title: "Erro", description: e.message }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      if (!form.hora.trim()) throw new Error("Horário obrigatório");
+      if (!form.desc.trim()) throw new Error("Descrição obrigatória");
+      if (!/^\d{2}:\d{2}$/.test(form.hora.trim())) throw new Error("Formato de hora inválido (HH:MM)");
+      const { error } = await supabase.from("rdo_atividade").update({
+        hora: form.hora.trim(),
+        descricao: form.desc.trim(),
+        tipo_atividade: form.tipo,
+        impacto_cronograma: form.impacto,
+      }).eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rdo_atividade", rdoDiaId] });
+      resetForm();
+      toast({ title: "Atividade atualizada!" });
     },
     onError: (e: any) => toast({ variant: "destructive", title: "Erro", description: e.message }),
   });
@@ -110,12 +137,27 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
     "crítico": "bg-red-500/10 text-red-700 dark:text-red-400",
   };
 
+  const startEdit = (a: any) => {
+    setEditingId(a.id);
+    setForm({
+      hora: a.hora || "",
+      desc: a.descricao,
+      tipo: a.tipo_atividade,
+      impacto: a.impacto_cronograma || "nenhum",
+    });
+    setShowForm(true);
+  };
+
   const handleRegisterNow = () => {
-    setHora(getCurrentTime());
+    resetForm();
+    setForm((f) => ({ ...f, hora: getCurrentTime() }));
     setShowForm(true);
   };
 
   if (isLoading) return <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+
+  const isEditing = !!editingId;
+  const isSaving = isEditing ? updateMutation.isPending : addMutation.isPending;
 
   return (
     <div className="space-y-3">
@@ -123,15 +165,12 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
         <p className="text-sm text-muted-foreground text-center py-3">Nenhuma atividade registrada.</p>
       )}
 
-      {/* Timeline view */}
       {sortedAtividades.length > 0 && (
         <div className="relative pl-6 border-l-2 border-muted space-y-1">
           {sortedAtividades.map((a: any) => (
             <div key={a.id} className="relative flex items-start gap-2 py-1.5">
-              {/* Timeline dot */}
               <div className="absolute -left-[25px] top-2.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-background" />
-
-              <div className="flex items-start gap-2 flex-1 p-2 rounded-md border bg-card min-w-0">
+              <div className={`flex items-start gap-2 flex-1 p-2 rounded-md border bg-card min-w-0 ${editingId === a.id ? "ring-2 ring-primary/30" : ""}`}>
                 {canEdit && (
                   <Checkbox
                     checked={a.concluida}
@@ -141,13 +180,9 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-primary shrink-0">
-                      {a.hora || "--:--"}
-                    </span>
+                    <span className="text-xs font-mono font-bold text-primary shrink-0">{a.hora || "--:--"}</span>
                     <span className="text-xs text-muted-foreground">–</span>
-                    <p className={`text-sm ${a.concluida ? "line-through text-muted-foreground" : ""}`}>
-                      {a.descricao}
-                    </p>
+                    <p className={`text-sm ${a.concluida ? "line-through text-muted-foreground" : ""}`}>{a.descricao}</p>
                   </div>
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     <Badge variant="outline" className="text-[10px] h-5">{a.tipo_atividade}</Badge>
@@ -159,9 +194,14 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
                   </div>
                 </div>
                 {canEdit && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteMutation.mutate(a.id)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(a)}>
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(a.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -171,31 +211,39 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
 
       {showForm && (
         <div className="space-y-2 p-3 rounded-md border bg-muted/30">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">{isEditing ? "Editar atividade" : "Nova atividade"}</span>
+            {isEditing && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetForm}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
             <Input
               type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
+              value={form.hora}
+              onChange={(e) => setForm({ ...form, hora: e.target.value })}
               className="w-28 shrink-0 font-mono"
               placeholder="HH:MM"
               required
             />
             <Input
               placeholder="Descrição da atividade..."
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
+              value={form.desc}
+              onChange={(e) => setForm({ ...form, desc: e.target.value })}
               className="flex-1"
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Select value={tipo} onValueChange={setTipo}>
+            <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
               <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {tiposAtividade.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={impacto} onValueChange={setImpacto}>
+            <Select value={form.impacto} onValueChange={(v) => setForm({ ...form, impacto: v })}>
               <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {impactoCronograma.map((i) => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
@@ -203,17 +251,18 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
             </Select>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>
-              {addMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Salvar
+            <Button size="sm" onClick={() => isEditing ? updateMutation.mutate() : addMutation.mutate()} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              {isEditing ? "Atualizar" : "Salvar"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <Button size="sm" variant="ghost" onClick={resetForm}>Cancelar</Button>
           </div>
         </div>
       )}
 
       {canEdit && !showForm && (
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowForm(true)}>
+          <Button variant="outline" size="sm" className="flex-1" onClick={() => { resetForm(); setShowForm(true); }}>
             <Plus className="mr-1 h-3.5 w-3.5" /> Nova Atividade
           </Button>
           <Button variant="default" size="sm" className="shrink-0" onClick={handleRegisterNow}>
