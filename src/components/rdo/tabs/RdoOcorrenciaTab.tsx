@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Loader2, Trash2, ShieldAlert, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, Trash2, ShieldAlert, AlertTriangle, Pencil, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { DEMO_OCORRENCIAS } from "@/lib/demoData";
@@ -28,6 +28,8 @@ const impactoColors: Record<string, string> = {
   "crítico": "bg-red-500/10 text-red-700 dark:text-red-400",
 };
 
+const emptyForm = { tipo: "Técnica", descricao: "", impacto: "baixo", responsavel: "", risco_contratual: false };
+
 interface Props {
   rdoDiaId: string;
   companyId: string;
@@ -39,7 +41,8 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { isDemo } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ tipo: "Técnica", descricao: "", impacto: "baixo", responsavel: "", risco_contratual: false });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...emptyForm });
 
   const { data: ocorrencias = [], isLoading } = useQuery({
     queryKey: ["rdo_ocorrencia", rdoDiaId],
@@ -54,6 +57,12 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
       return data;
     },
   });
+
+  const resetForm = () => {
+    setForm({ ...emptyForm });
+    setShowForm(false);
+    setEditingId(null);
+  };
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -72,9 +81,30 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rdo_ocorrencia", rdoDiaId] });
-      setForm({ tipo: "Técnica", descricao: "", impacto: "baixo", responsavel: "", risco_contratual: false });
-      setShowForm(false);
+      resetForm();
       toast({ title: "Ocorrência registrada!" });
+    },
+    onError: (e: any) => toast({ variant: "destructive", title: "Erro", description: e.message }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      if (!form.descricao.trim()) throw new Error("Descrição obrigatória");
+      const { error } = await supabase.from("rdo_ocorrencia").update({
+        tipo_ocorrencia: form.tipo,
+        descricao: form.descricao.trim(),
+        impacto: form.impacto,
+        responsavel: form.responsavel || null,
+        gera_risco_contratual: form.risco_contratual,
+        gera_alerta: form.impacto === "alto" || form.impacto === "crítico",
+      }).eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rdo_ocorrencia", rdoDiaId] });
+      resetForm();
+      toast({ title: "Ocorrência atualizada!" });
     },
     onError: (e: any) => toast({ variant: "destructive", title: "Erro", description: e.message }),
   });
@@ -90,7 +120,22 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
     },
   });
 
+  const startEdit = (o: any) => {
+    setEditingId(o.id);
+    setForm({
+      tipo: o.tipo_ocorrencia,
+      descricao: o.descricao,
+      impacto: o.impacto || "baixo",
+      responsavel: o.responsavel || "",
+      risco_contratual: o.gera_risco_contratual ?? false,
+    });
+    setShowForm(true);
+  };
+
   if (isLoading) return <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+
+  const isEditing = !!editingId;
+  const isSaving = isEditing ? updateMutation.isPending : addMutation.isPending;
 
   return (
     <div className="space-y-3">
@@ -99,13 +144,18 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
       )}
 
       {ocorrencias.map((o: any) => (
-        <div key={o.id} className="p-2.5 rounded-md border bg-card space-y-1">
+        <div key={o.id} className={`p-2.5 rounded-md border bg-card space-y-1 ${editingId === o.id ? "ring-2 ring-primary/30" : ""}`}>
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm flex-1">{o.descricao}</p>
             {canEdit && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => deleteMutation.mutate(o.id)}>
-                <Trash2 className="h-3 w-3 text-destructive" />
-              </Button>
+              <div className="flex gap-0.5 shrink-0">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(o)}>
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteMutation.mutate(o.id)}>
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              </div>
             )}
           </div>
           <div className="flex gap-1.5 flex-wrap">
@@ -125,6 +175,14 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
 
       {showForm && (
         <div className="space-y-2 p-3 rounded-md border bg-muted/30">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">{isEditing ? "Editar ocorrência" : "Nova ocorrência"}</span>
+            {isEditing && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetForm}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
           <Textarea placeholder="Descrição da ocorrência..." rows={2} value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
@@ -146,16 +204,17 @@ export function RdoOcorrenciaTab({ rdoDiaId, companyId, canEdit }: Props) {
             <Label htmlFor="risco" className="text-xs">Gera risco contratual</Label>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>
-              {addMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Salvar
+            <Button size="sm" onClick={() => isEditing ? updateMutation.mutate() : addMutation.mutate()} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              {isEditing ? "Atualizar" : "Salvar"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <Button size="sm" variant="ghost" onClick={resetForm}>Cancelar</Button>
           </div>
         </div>
       )}
 
       {canEdit && !showForm && (
-        <Button variant="outline" size="sm" className="w-full" onClick={() => setShowForm(true)}>
+        <Button variant="outline" size="sm" className="w-full" onClick={() => { resetForm(); setShowForm(true); }}>
           <Plus className="mr-1 h-3.5 w-3.5" /> Registrar Ocorrência
         </Button>
       )}
