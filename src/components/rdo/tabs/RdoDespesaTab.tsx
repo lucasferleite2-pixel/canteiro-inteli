@@ -242,6 +242,8 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
                     <TableCell>
                       <Badge variant="outline" className="text-[10px] h-5">{tipoLabels[d.tipo] || d.tipo}</Badge>
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {d.fase || "—"}
                     <TableCell className="text-xs text-right">{Number(d.quantidade).toLocaleString("pt-BR")} {d.unidade}</TableCell>
                     <TableCell className="text-xs text-right">R$ {Number(d.valor_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                     <TableCell className="text-xs text-right font-medium">R$ {Number(d.valor_total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
