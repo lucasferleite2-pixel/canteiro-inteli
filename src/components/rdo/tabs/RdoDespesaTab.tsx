@@ -103,7 +103,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
       const { error } = await supabase.from("rdo_despesa_item").insert({
         rdo_dia_id: rdoDiaId,
         company_id: companyId,
-        tipo: form.tipo,
+        tipo: getResolvedTipo(),
         descricao: form.descricao.trim(),
         quantidade: qtd,
         unidade: form.unidade || "un",
