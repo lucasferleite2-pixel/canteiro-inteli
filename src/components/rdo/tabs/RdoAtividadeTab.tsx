@@ -194,6 +194,9 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
                   </div>
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     <Badge variant="outline" className="text-[10px] h-5">{a.tipo_atividade}</Badge>
+                    {a.fase && (
+                      <Badge variant="secondary" className="text-[10px] h-5">{a.fase}</Badge>
+                    )}
                     {a.impacto_cronograma !== "nenhum" && (
                       <Badge className={`text-[10px] h-5 ${impactoColor[a.impacto_cronograma] || ""}`}>
                         Impacto: {a.impacto_cronograma}
