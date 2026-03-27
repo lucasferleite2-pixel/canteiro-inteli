@@ -133,7 +133,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
       const vu = parseFloat(form.valor_unitario) || 0;
       if (qtd <= 0 || vu <= 0) throw new Error("Quantidade e valor unitário devem ser maiores que zero");
       const { error } = await supabase.from("rdo_despesa_item").update({
-        tipo: form.tipo,
+        tipo: getResolvedTipo(),
         descricao: form.descricao.trim(),
         quantidade: qtd,
         unidade: form.unidade || "un",
