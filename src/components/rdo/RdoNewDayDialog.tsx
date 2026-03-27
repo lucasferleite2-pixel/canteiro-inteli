@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 const climaOptions = ["Ensolarado", "Nublado", "Chuvoso", "Tempestade", "Neve/Frio"];
-const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento", "Pavimentação", "Demolição"];
+const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento", "Pavimentação", "Demolição", "Sondagem", "Terraplanagem"];
 const riscoOptions = ["baixo", "médio", "alto"];
 
 interface Props {

@@ -34,7 +34,7 @@ const defaultFilters: RdoFilterValues = {
   apenasCustoNaoPrevisto: false,
 };
 
-const fases = ["Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento", "Pavimentação", "Demolição"];
+const fases = ["Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento", "Pavimentação", "Demolição", "Sondagem", "Terraplanagem"];
 const riscos = ["baixo", "médio", "alto"];
 
 interface Props {

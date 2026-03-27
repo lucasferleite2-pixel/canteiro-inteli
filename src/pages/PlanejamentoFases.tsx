@@ -17,7 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { generatePlanejamentoPdf } from "@/lib/planejamentoPdfGenerator";
 
-const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento", "Pavimentação", "Demolição"];
+const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento", "Pavimentação", "Demolição", "Sondagem", "Terraplanagem"];
 const unidadeOptions = ["m²", "m³", "metro linear", "unidade", "ton", "kg"];
 
 const formatCurrency = (v: number) =>

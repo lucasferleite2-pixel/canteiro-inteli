@@ -47,7 +47,7 @@ const tipoLabels: Record<string, string> = {
 
 const fasesObra = [
   "Fundação", "Estrutura", "Alvenaria", "Demolição", "Terraplanagem",
-  "Instalações Elétricas", "Instalações Hidráulicas", "Acabamento",
+  "Sondagem", "Instalações Elétricas", "Instalações Hidráulicas", "Acabamento",
   "Cobertura", "Pintura", "Paisagismo", "Pavimentação", "Outro",
 ];
 
