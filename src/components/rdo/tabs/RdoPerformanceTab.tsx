@@ -67,20 +67,21 @@ export function RdoPerformanceTab({ obraId, companyId, rdos }: Props) {
   const metrics = useMemo((): FaseMetric[] => {
     const faseMap = new Map<string, { qtd: number; custo: number; unidade: string }>();
 
+    // Group by item-level fase from despesas instead of day-level fase_obra
+    despesas.forEach((d: any) => {
+      const fase = d.fase || d.centro_custo || (d.rdo_dia as any)?.fase_obra || "Sem fase";
+      if (!faseMap.has(fase)) faseMap.set(fase, { qtd: 0, custo: 0, unidade: "un" });
+      const entry = faseMap.get(fase)!;
+      entry.custo += Number(d.quantidade || 0) * Number(d.valor_unitario || 0);
+    });
+
+    // Also add day-level data for phases not covered by despesas
     rdos.forEach((r: any) => {
       const fase = r.fase_obra || "Sem fase";
       if (!faseMap.has(fase)) faseMap.set(fase, { qtd: 0, custo: 0, unidade: r.unidade_medicao || "m²" });
       const entry = faseMap.get(fase)!;
       entry.qtd += Number(r.quantidade_executada || 0);
-      entry.custo += Number(r.custo_dia || 0);
-    });
-
-    // Add despesa costs per fase
-    despesas.forEach((d: any) => {
-      const fase = d.centro_custo || (d.rdo_dia as any)?.fase_obra || "Sem fase";
-      if (faseMap.has(fase)) {
-        // Already counted via custo_dia, skip to avoid double counting
-      }
+      if (!entry.unidade || entry.unidade === "un") entry.unidade = r.unidade_medicao || "m²";
     });
 
     return Array.from(faseMap.entries()).map(([fase, data]) => {
