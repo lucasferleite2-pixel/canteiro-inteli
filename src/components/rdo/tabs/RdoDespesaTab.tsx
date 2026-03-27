@@ -25,6 +25,7 @@ const tiposDespesa = [
   { value: "ferramentas", label: "Ferramentas" },
   { value: "epi", label: "EPI" },
   { value: "locacao", label: "Locação" },
+  { value: "sondagem", label: "Sondagem" },
   { value: "servico_terceiro", label: "Serviço Terceirizado" },
   { value: "administrativo", label: "Administrativo" },
   { value: "outro", label: "Outro (especificar)" },
