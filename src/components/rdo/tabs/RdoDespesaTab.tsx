@@ -20,7 +20,14 @@ const tiposDespesa = [
   { value: "mao_de_obra", label: "Mão de Obra" },
   { value: "equipamento", label: "Equipamento" },
   { value: "transporte", label: "Transporte" },
-  { value: "outro", label: "Outro" },
+  { value: "alimentacao", label: "Alimentação" },
+  { value: "combustivel", label: "Combustível" },
+  { value: "ferramentas", label: "Ferramentas" },
+  { value: "epi", label: "EPI" },
+  { value: "locacao", label: "Locação" },
+  { value: "servico_terceiro", label: "Serviço Terceirizado" },
+  { value: "administrativo", label: "Administrativo" },
+  { value: "outro", label: "Outro (especificar)" },
 ];
 
 const tipoLabels: Record<string, string> = {
