@@ -701,6 +701,7 @@ export type Database = {
           created_at: string
           descricao: string
           etapa_planejamento_id: string | null
+          fase: string | null
           hora: string | null
           id: string
           impacto_cronograma: string | null
@@ -714,6 +715,7 @@ export type Database = {
           created_at?: string
           descricao: string
           etapa_planejamento_id?: string | null
+          fase?: string | null
           hora?: string | null
           id?: string
           impacto_cronograma?: string | null
@@ -727,6 +729,7 @@ export type Database = {
           created_at?: string
           descricao?: string
           etapa_planejamento_id?: string | null
+          fase?: string | null
           hora?: string | null
           id?: string
           impacto_cronograma?: string | null
@@ -807,6 +810,7 @@ export type Database = {
           created_at: string
           created_by: string
           descricao: string
+          fase: string | null
           id: string
           incluir_no_pdf: boolean | null
           observacao: string | null
@@ -825,6 +829,7 @@ export type Database = {
           created_at?: string
           created_by: string
           descricao: string
+          fase?: string | null
           id?: string
           incluir_no_pdf?: boolean | null
           observacao?: string | null
@@ -843,6 +848,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           descricao?: string
+          fase?: string | null
           id?: string
           incluir_no_pdf?: boolean | null
           observacao?: string | null
