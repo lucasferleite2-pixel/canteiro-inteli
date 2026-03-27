@@ -293,6 +293,9 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
                 {tiposDespesa.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            {form.tipo === "outro" && (
+              <Input placeholder="Especifique a categoria..." className="h-8 text-xs col-span-1 sm:col-span-3" value={form.tipo_customizado} onChange={(e) => setForm({ ...form, tipo_customizado: e.target.value })} />
+            )}
             <Input placeholder="Qtd" type="number" className="h-8 text-xs" value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: e.target.value })} />
             <Input placeholder="Unidade" className="h-8 text-xs" value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} />
             <Input placeholder="Valor unit." type="number" step="0.01" className="h-8 text-xs" value={form.valor_unitario} onChange={(e) => setForm({ ...form, valor_unitario: e.target.value })} />
