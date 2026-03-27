@@ -120,6 +120,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
         incluir_no_pdf: form.incluir_no_pdf,
         afeta_curva_financeira: form.afeta_curva_financeira,
         observacao: form.observacao || null,
+        fase: form.fase || null,
         created_by: user!.id,
       });
       if (error) throw error;
