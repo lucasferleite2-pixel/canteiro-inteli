@@ -18,7 +18,7 @@ export function AppLayout() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center gap-4 border-b border-border px-4 bg-card">
+          <header className="h-14 flex items-center gap-4 px-4 bg-card/60 glass-header sticky top-0 z-30">
             <SidebarTrigger />
             <div className="flex-1" />
             <div className="flex items-center gap-2">

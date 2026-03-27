@@ -87,8 +87,8 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
+    <Sidebar className="glass-sidebar bg-sidebar">
+      <SidebarHeader className="border-b border-sidebar-border/40 px-4 py-4">
         <div className="flex items-center gap-2">
           <HardHat className="h-7 w-7 text-primary" />
           <div>
@@ -106,7 +106,7 @@ export function AppSidebar() {
         {renderGroup("Controle", controlItems)}
         {renderGroup("Sistema", systemItems)}
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      <SidebarFooter className="border-t border-sidebar-border/40 p-3">
         <div className="text-center">
           <p className="text-xs font-medium text-sidebar-foreground truncate">
             {profile?.full_name || "Usuário"}
