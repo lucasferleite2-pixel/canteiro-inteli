@@ -83,6 +83,7 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
         descricao: form.desc.trim(),
         tipo_atividade: form.tipo,
         impacto_cronograma: form.impacto,
+        fase: form.fase || null,
       });
       if (error) throw error;
     },
