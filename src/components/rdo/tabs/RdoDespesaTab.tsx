@@ -41,6 +41,7 @@ const tipoLabels: Record<string, string> = {
   ferramentas: "Ferramentas",
   epi: "EPI",
   locacao: "Locação",
+  sondagem: "Sondagem",
   servico_terceiro: "Serviço Terceirizado",
   administrativo: "Administrativo",
   outro: "Outro",
