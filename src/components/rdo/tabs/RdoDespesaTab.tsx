@@ -287,7 +287,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
           </div>
           <Input placeholder="Descrição da despesa..." value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
+            <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v, tipo_customizado: v === "outro" ? form.tipo_customizado : "" })}>
               <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {tiposDespesa.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
