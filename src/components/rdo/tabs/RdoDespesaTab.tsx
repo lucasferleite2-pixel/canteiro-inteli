@@ -45,9 +45,16 @@ const tipoLabels: Record<string, string> = {
   outro: "Outro",
 };
 
+const fasesObra = [
+  "Fundação", "Estrutura", "Alvenaria", "Demolição", "Terraplanagem",
+  "Instalações Elétricas", "Instalações Hidráulicas", "Acabamento",
+  "Cobertura", "Pintura", "Paisagismo", "Pavimentação", "Outro",
+];
+
 const emptyForm = {
   tipo: "material",
   tipo_customizado: "",
+  fase: "",
   descricao: "",
   quantidade: "",
   unidade: "un",
@@ -113,6 +120,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
         incluir_no_pdf: form.incluir_no_pdf,
         afeta_curva_financeira: form.afeta_curva_financeira,
         observacao: form.observacao || null,
+        fase: form.fase || null,
         created_by: user!.id,
       });
       if (error) throw error;
@@ -143,6 +151,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
         incluir_no_pdf: form.incluir_no_pdf,
         afeta_curva_financeira: form.afeta_curva_financeira,
         observacao: form.observacao || null,
+        fase: form.fase || null,
       }).eq("id", editingId);
       if (error) throw error;
     },
@@ -176,6 +185,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
     setForm({
       tipo: knownTipo ? d.tipo : "outro",
       tipo_customizado: knownTipo ? "" : d.tipo,
+      fase: d.fase || "",
       descricao: d.descricao,
       quantidade: String(d.quantidade),
       unidade: d.unidade || "un",
@@ -212,6 +222,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
                 <TableRow>
                   <TableHead className="text-xs">Descrição</TableHead>
                   <TableHead className="text-xs">Tipo</TableHead>
+                  <TableHead className="text-xs">Fase</TableHead>
                   <TableHead className="text-xs text-right">Qtd</TableHead>
                   <TableHead className="text-xs text-right">Unit.</TableHead>
                   <TableHead className="text-xs text-right">Total</TableHead>
@@ -230,6 +241,9 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-[10px] h-5">{tipoLabels[d.tipo] || d.tipo}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {d.fase || "—"}
                     </TableCell>
                     <TableCell className="text-xs text-right">{Number(d.quantidade).toLocaleString("pt-BR")} {d.unidade}</TableCell>
                     <TableCell className="text-xs text-right">R$ {Number(d.valor_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
@@ -300,7 +314,16 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
             <Input placeholder="Unidade" className="h-8 text-xs" value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} />
             <Input placeholder="Valor unit." type="number" step="0.01" className="h-8 text-xs" value={form.valor_unitario} onChange={(e) => setForm({ ...form, valor_unitario: e.target.value })} />
           </div>
-          <Input placeholder="Centro de custo (opcional)" className="h-8 text-xs" value={form.centro_custo} onChange={(e) => setForm({ ...form, centro_custo: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={form.fase || "_none"} onValueChange={(v) => setForm({ ...form, fase: v === "_none" ? "" : v })}>
+              <SelectTrigger className="text-xs h-8"><SelectValue placeholder="Fase da obra" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Sem fase</SelectItem>
+                {fasesObra.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Input placeholder="Centro de custo (opcional)" className="h-8 text-xs" value={form.centro_custo} onChange={(e) => setForm({ ...form, centro_custo: e.target.value })} />
+          </div>
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch checked={form.previsto_no_orcamento} onCheckedChange={(v) => setForm({ ...form, previsto_no_orcamento: v })} id="previsto_orc" />

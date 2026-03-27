@@ -18,6 +18,11 @@ const impactoCronograma = [
   { value: "médio", label: "Médio" },
   { value: "crítico", label: "Crítico" },
 ];
+const fasesObra = [
+  "Fundação", "Estrutura", "Alvenaria", "Demolição", "Terraplanagem",
+  "Instalações Elétricas", "Instalações Hidráulicas", "Acabamento",
+  "Cobertura", "Pintura", "Paisagismo", "Pavimentação", "Outro",
+];
 
 interface Props {
   rdoDiaId: string;
@@ -30,7 +35,7 @@ function getCurrentTime() {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
-const emptyForm = { hora: "", desc: "", tipo: "Execução", impacto: "nenhum" };
+const emptyForm = { hora: "", desc: "", tipo: "Execução", impacto: "nenhum", fase: "" };
 
 export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { toast } = useToast();
@@ -78,6 +83,7 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
         descricao: form.desc.trim(),
         tipo_atividade: form.tipo,
         impacto_cronograma: form.impacto,
+        fase: form.fase || null,
       });
       if (error) throw error;
     },
@@ -100,6 +106,7 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
         descricao: form.desc.trim(),
         tipo_atividade: form.tipo,
         impacto_cronograma: form.impacto,
+        fase: form.fase || null,
       }).eq("id", editingId);
       if (error) throw error;
     },
@@ -144,6 +151,7 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
       desc: a.descricao,
       tipo: a.tipo_atividade,
       impacto: a.impacto_cronograma || "nenhum",
+      fase: a.fase || "",
     });
     setShowForm(true);
   };
@@ -186,6 +194,9 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
                   </div>
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     <Badge variant="outline" className="text-[10px] h-5">{a.tipo_atividade}</Badge>
+                    {a.fase && (
+                      <Badge variant="secondary" className="text-[10px] h-5">{a.fase}</Badge>
+                    )}
                     {a.impacto_cronograma !== "nenhum" && (
                       <Badge className={`text-[10px] h-5 ${impactoColor[a.impacto_cronograma] || ""}`}>
                         Impacto: {a.impacto_cronograma}
@@ -236,11 +247,18 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
               <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {tiposAtividade.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={form.fase || "_none"} onValueChange={(v) => setForm({ ...form, fase: v === "_none" ? "" : v })}>
+              <SelectTrigger className="text-xs h-8"><SelectValue placeholder="Fase" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Sem fase</SelectItem>
+                {fasesObra.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={form.impacto} onValueChange={(v) => setForm({ ...form, impacto: v })}>
