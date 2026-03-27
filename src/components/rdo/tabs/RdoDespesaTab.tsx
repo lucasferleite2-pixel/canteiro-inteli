@@ -45,9 +45,16 @@ const tipoLabels: Record<string, string> = {
   outro: "Outro",
 };
 
+const fasesObra = [
+  "Fundação", "Estrutura", "Alvenaria", "Demolição", "Terraplanagem",
+  "Instalações Elétricas", "Instalações Hidráulicas", "Acabamento",
+  "Cobertura", "Pintura", "Paisagismo", "Pavimentação", "Outro",
+];
+
 const emptyForm = {
   tipo: "material",
   tipo_customizado: "",
+  fase: "",
   descricao: "",
   quantidade: "",
   unidade: "un",

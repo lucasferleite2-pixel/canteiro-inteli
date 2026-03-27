@@ -18,6 +18,11 @@ const impactoCronograma = [
   { value: "médio", label: "Médio" },
   { value: "crítico", label: "Crítico" },
 ];
+const fasesObra = [
+  "Fundação", "Estrutura", "Alvenaria", "Demolição", "Terraplanagem",
+  "Instalações Elétricas", "Instalações Hidráulicas", "Acabamento",
+  "Cobertura", "Pintura", "Paisagismo", "Pavimentação", "Outro",
+];
 
 interface Props {
   rdoDiaId: string;
