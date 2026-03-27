@@ -20,7 +20,14 @@ const tiposDespesa = [
   { value: "mao_de_obra", label: "Mão de Obra" },
   { value: "equipamento", label: "Equipamento" },
   { value: "transporte", label: "Transporte" },
-  { value: "outro", label: "Outro" },
+  { value: "alimentacao", label: "Alimentação" },
+  { value: "combustivel", label: "Combustível" },
+  { value: "ferramentas", label: "Ferramentas" },
+  { value: "epi", label: "EPI" },
+  { value: "locacao", label: "Locação" },
+  { value: "servico_terceiro", label: "Serviço Terceirizado" },
+  { value: "administrativo", label: "Administrativo" },
+  { value: "outro", label: "Outro (especificar)" },
 ];
 
 const tipoLabels: Record<string, string> = {
@@ -28,11 +35,19 @@ const tipoLabels: Record<string, string> = {
   mao_de_obra: "Mão de Obra",
   equipamento: "Equipamento",
   transporte: "Transporte",
+  alimentacao: "Alimentação",
+  combustivel: "Combustível",
+  ferramentas: "Ferramentas",
+  epi: "EPI",
+  locacao: "Locação",
+  servico_terceiro: "Serviço Terceirizado",
+  administrativo: "Administrativo",
   outro: "Outro",
 };
 
 const emptyForm = {
   tipo: "material",
+  tipo_customizado: "",
   descricao: "",
   quantidade: "",
   unidade: "un",
@@ -88,7 +103,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
       const { error } = await supabase.from("rdo_despesa_item").insert({
         rdo_dia_id: rdoDiaId,
         company_id: companyId,
-        tipo: form.tipo,
+        tipo: getResolvedTipo(),
         descricao: form.descricao.trim(),
         quantidade: qtd,
         unidade: form.unidade || "un",
@@ -118,7 +133,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
       const vu = parseFloat(form.valor_unitario) || 0;
       if (qtd <= 0 || vu <= 0) throw new Error("Quantidade e valor unitário devem ser maiores que zero");
       const { error } = await supabase.from("rdo_despesa_item").update({
-        tipo: form.tipo,
+        tipo: getResolvedTipo(),
         descricao: form.descricao.trim(),
         quantidade: qtd,
         unidade: form.unidade || "un",
@@ -150,10 +165,17 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
     },
   });
 
+  const getResolvedTipo = () => {
+    if (form.tipo === "outro" && form.tipo_customizado.trim()) return form.tipo_customizado.trim();
+    return form.tipo;
+  };
+
   const startEdit = (d: any) => {
     setEditingId(d.id);
+    const knownTipo = tiposDespesa.find(t => t.value === d.tipo);
     setForm({
-      tipo: d.tipo,
+      tipo: knownTipo ? d.tipo : "outro",
+      tipo_customizado: knownTipo ? "" : d.tipo,
       descricao: d.descricao,
       quantidade: String(d.quantidade),
       unidade: d.unidade || "un",
@@ -265,12 +287,15 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
           </div>
           <Input placeholder="Descrição da despesa..." value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
+            <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v, tipo_customizado: v === "outro" ? form.tipo_customizado : "" })}>
               <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {tiposDespesa.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            {form.tipo === "outro" && (
+              <Input placeholder="Especifique a categoria..." className="h-8 text-xs col-span-1 sm:col-span-3" value={form.tipo_customizado} onChange={(e) => setForm({ ...form, tipo_customizado: e.target.value })} />
+            )}
             <Input placeholder="Qtd" type="number" className="h-8 text-xs" value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: e.target.value })} />
             <Input placeholder="Unidade" className="h-8 text-xs" value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} />
             <Input placeholder="Valor unit." type="number" step="0.01" className="h-8 text-xs" value={form.valor_unitario} onChange={(e) => setForm({ ...form, valor_unitario: e.target.value })} />
