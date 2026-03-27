@@ -247,11 +247,18 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
               <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {tiposAtividade.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={form.fase || "_none"} onValueChange={(v) => setForm({ ...form, fase: v === "_none" ? "" : v })}>
+              <SelectTrigger className="text-xs h-8"><SelectValue placeholder="Fase" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Sem fase</SelectItem>
+                {fasesObra.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={form.impacto} onValueChange={(v) => setForm({ ...form, impacto: v })}>
