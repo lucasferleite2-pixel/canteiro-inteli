@@ -88,13 +88,21 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
 
     for (const item of pending) {
       try {
-        const compressed = await compressImage(item.file);
-        const ext = "jpg";
+        let fileToUpload: File;
+        let mimeType: string;
+        try {
+          fileToUpload = await compressImage(item.file);
+          mimeType = fileToUpload.type || "image/jpeg";
+        } catch {
+          fileToUpload = item.file;
+          mimeType = item.file.type || "application/octet-stream";
+        }
+        const ext = mimeType === "image/jpeg" ? "jpg" : (mimeType.split("/")[1] || "bin");
         const path = `${user.id}/${entryId}/${crypto.randomUUID()}.${ext}`;
 
         const { error: uploadErr } = await supabase.storage
           .from("diary-photos")
-          .upload(path, compressed, { contentType: "image/jpeg" });
+          .upload(path, fileToUpload, { contentType: mimeType });
 
         if (uploadErr) throw uploadErr;
 
@@ -105,8 +113,8 @@ export function DiaryPhotoUpload({ entryId, projectId, companyId, contracts = []
           uploaded_by: user.id,
           storage_path: path,
           file_name: item.displayName || item.file.name,
-          file_size: compressed.size,
-          mime_type: "image/jpeg",
+          file_size: fileToUpload.size,
+          mime_type: mimeType,
           description: item.description || null,
           activity: item.activity || null,
           contract_id: item.contractId || null,
