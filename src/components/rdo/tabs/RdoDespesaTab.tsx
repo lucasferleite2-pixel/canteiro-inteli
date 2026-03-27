@@ -311,7 +311,16 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
             <Input placeholder="Unidade" className="h-8 text-xs" value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} />
             <Input placeholder="Valor unit." type="number" step="0.01" className="h-8 text-xs" value={form.valor_unitario} onChange={(e) => setForm({ ...form, valor_unitario: e.target.value })} />
           </div>
-          <Input placeholder="Centro de custo (opcional)" className="h-8 text-xs" value={form.centro_custo} onChange={(e) => setForm({ ...form, centro_custo: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={form.fase || "_none"} onValueChange={(v) => setForm({ ...form, fase: v === "_none" ? "" : v })}>
+              <SelectTrigger className="text-xs h-8"><SelectValue placeholder="Fase da obra" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Sem fase</SelectItem>
+                {fasesObra.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Input placeholder="Centro de custo (opcional)" className="h-8 text-xs" value={form.centro_custo} onChange={(e) => setForm({ ...form, centro_custo: e.target.value })} />
+          </div>
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch checked={form.previsto_no_orcamento} onCheckedChange={(v) => setForm({ ...form, previsto_no_orcamento: v })} id="previsto_orc" />
