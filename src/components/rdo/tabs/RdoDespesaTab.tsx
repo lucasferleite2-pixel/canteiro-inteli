@@ -165,10 +165,17 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
     },
   });
 
+  const getResolvedTipo = () => {
+    if (form.tipo === "outro" && form.tipo_customizado.trim()) return form.tipo_customizado.trim();
+    return form.tipo;
+  };
+
   const startEdit = (d: any) => {
     setEditingId(d.id);
+    const knownTipo = tiposDespesa.find(t => t.value === d.tipo);
     setForm({
-      tipo: d.tipo,
+      tipo: knownTipo ? d.tipo : "outro",
+      tipo_customizado: knownTipo ? "" : d.tipo,
       descricao: d.descricao,
       quantidade: String(d.quantidade),
       unidade: d.unidade || "un",
