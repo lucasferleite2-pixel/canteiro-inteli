@@ -25,7 +25,7 @@ interface Props {
   rdoDate?: string;
 }
 
-const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Instalações", "Acabamento", "Cobertura", "Infraestrutura", "Paisagismo"];
+const faseOptions = ["Fundação", "Estrutura", "Alvenaria", "Instalações", "Acabamento", "Cobertura", "Infraestrutura", "Paisagismo", "Sondagem", "Terraplanagem"];
 const tagRiscoOptions = [
   { value: "nenhuma", label: "Nenhuma" },
   { value: "técnico", label: "Técnico" },
