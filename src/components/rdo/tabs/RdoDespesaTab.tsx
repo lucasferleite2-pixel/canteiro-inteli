@@ -47,6 +47,7 @@ const tipoLabels: Record<string, string> = {
 
 const emptyForm = {
   tipo: "material",
+  tipo_customizado: "",
   descricao: "",
   quantidade: "",
   unidade: "un",
