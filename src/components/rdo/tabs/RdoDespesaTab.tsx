@@ -183,6 +183,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
     setForm({
       tipo: knownTipo ? d.tipo : "outro",
       tipo_customizado: knownTipo ? "" : d.tipo,
+      fase: d.fase || "",
       descricao: d.descricao,
       quantidade: String(d.quantidade),
       unidade: d.unidade || "un",
