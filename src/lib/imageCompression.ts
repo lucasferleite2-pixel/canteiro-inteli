@@ -61,7 +61,9 @@ export async function compressImage(
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Failed to load image"));
+      // Instead of rejecting, return the original file so upload isn't blocked
+      console.warn("Image compression failed to load image, using original file");
+      resolve(file);
     };
 
     img.src = url;
