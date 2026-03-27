@@ -151,6 +151,7 @@ export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
       desc: a.descricao,
       tipo: a.tipo_atividade,
       impacto: a.impacto_cronograma || "nenhum",
+      fase: a.fase || "",
     });
     setShowForm(true);
   };
