@@ -35,7 +35,7 @@ function getCurrentTime() {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
-const emptyForm = { hora: "", desc: "", tipo: "Execução", impacto: "nenhum" };
+const emptyForm = { hora: "", desc: "", tipo: "Execução", impacto: "nenhum", fase: "" };
 
 export function RdoAtividadeTab({ rdoDiaId, companyId, canEdit }: Props) {
   const { toast } = useToast();
