@@ -1,0 +1,1 @@
+ALTER TABLE public.rdo_despesa_item DROP CONSTRAINT rdo_despesa_item_tipo_check;
