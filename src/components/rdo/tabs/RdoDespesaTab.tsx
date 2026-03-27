@@ -222,6 +222,7 @@ export function RdoDespesaTab({ rdoDiaId, companyId, canEdit }: Props) {
                 <TableRow>
                   <TableHead className="text-xs">Descrição</TableHead>
                   <TableHead className="text-xs">Tipo</TableHead>
+                  <TableHead className="text-xs">Fase</TableHead>
                   <TableHead className="text-xs text-right">Qtd</TableHead>
                   <TableHead className="text-xs text-right">Unit.</TableHead>
                   <TableHead className="text-xs text-right">Total</TableHead>
