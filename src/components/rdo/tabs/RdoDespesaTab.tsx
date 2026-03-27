@@ -35,6 +35,13 @@ const tipoLabels: Record<string, string> = {
   mao_de_obra: "Mão de Obra",
   equipamento: "Equipamento",
   transporte: "Transporte",
+  alimentacao: "Alimentação",
+  combustivel: "Combustível",
+  ferramentas: "Ferramentas",
+  epi: "EPI",
+  locacao: "Locação",
+  servico_terceiro: "Serviço Terceirizado",
+  administrativo: "Administrativo",
   outro: "Outro",
 };
 
