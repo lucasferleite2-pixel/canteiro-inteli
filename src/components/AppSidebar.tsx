@@ -48,6 +48,7 @@ const systemItems = [
   { title: "Auditoria RDO", url: "/auditoria", icon: Shield },
   { title: "Usuários", url: "/usuarios", icon: Users },
   { title: "Empresa", url: "/empresa/config", icon: Settings },
+  { title: "Exportar Dados", url: "/exportar-dados", icon: HardHat },
 ];
 
 export function AppSidebar() {

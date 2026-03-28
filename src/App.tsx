@@ -65,6 +65,7 @@ const App = () => (
               <Route path="/auditoria" element={<AuditoriaRdo />} />
               <Route path="/comparativo" element={<Comparativo />} />
               <Route path="/planejamento" element={<PlanejamentoFases />} />
+              <Route path="/exportar-dados" element={<ExportarDados />} />
             </Route>
             <Route path="/verificar/:documentId" element={<VerificarDocumento />} />
             <Route path="*" element={<NotFound />} />
