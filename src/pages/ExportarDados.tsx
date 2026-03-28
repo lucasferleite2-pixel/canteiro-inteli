@@ -28,18 +28,16 @@ const MODULES = [
 type ModuleKey = typeof MODULES[number]["key"];
 
 async function fetchTableData(table: string, companyId: string, single: boolean = false) {
-  const query = supabase.from(table).select("*").eq("company_id", companyId);
   if (single) {
-    const { data, error } = await query.maybeSingle();
+    const { data, error } = await (supabase as any).from(table).select("*").eq("company_id", companyId).maybeSingle();
     if (error) throw error;
     return data;
   }
-  // Fetch all rows (handle >1000 with pagination)
   let allData: any[] = [];
   let from = 0;
   const pageSize = 1000;
   while (true) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from(table)
       .select("*")
       .eq("company_id", companyId)
