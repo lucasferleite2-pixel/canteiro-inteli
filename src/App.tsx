@@ -18,6 +18,7 @@ import EmpresaConfig from "@/pages/EmpresaConfig";
 import AuditoriaRdo from "@/pages/AuditoriaRdo";
 import Comparativo from "@/pages/Comparativo";
 import PlanejamentoFases from "@/pages/PlanejamentoFases";
+import ExportarDados from "@/pages/ExportarDados";
 import Auth from "@/pages/Auth";
 import CompanySetup from "@/pages/CompanySetup";
 import NotFound from "./pages/NotFound";
