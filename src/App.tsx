@@ -18,6 +18,7 @@ import EmpresaConfig from "@/pages/EmpresaConfig";
 import AuditoriaRdo from "@/pages/AuditoriaRdo";
 import Comparativo from "@/pages/Comparativo";
 import PlanejamentoFases from "@/pages/PlanejamentoFases";
+import ExportarDados from "@/pages/ExportarDados";
 import Auth from "@/pages/Auth";
 import CompanySetup from "@/pages/CompanySetup";
 import NotFound from "./pages/NotFound";
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/auditoria" element={<AuditoriaRdo />} />
               <Route path="/comparativo" element={<Comparativo />} />
               <Route path="/planejamento" element={<PlanejamentoFases />} />
+              <Route path="/exportar-dados" element={<ExportarDados />} />
             </Route>
             <Route path="/verificar/:documentId" element={<VerificarDocumento />} />
             <Route path="*" element={<NotFound />} />

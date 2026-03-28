@@ -12,6 +12,7 @@ import {
   Shield,
   BarChart3,
   Target,
+  Download,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -48,6 +49,7 @@ const systemItems = [
   { title: "Auditoria RDO", url: "/auditoria", icon: Shield },
   { title: "Usuários", url: "/usuarios", icon: Users },
   { title: "Empresa", url: "/empresa/config", icon: Settings },
+  { title: "Exportar Dados", url: "/exportar-dados", icon: Download },
 ];
 
 export function AppSidebar() {
