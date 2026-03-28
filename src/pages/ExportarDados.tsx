@@ -28,8 +28,9 @@ const MODULES = [
 type ModuleKey = typeof MODULES[number]["key"];
 
 async function fetchTableData(table: string, companyId: string, single: boolean = false) {
+  const companyCol = table === "companies" ? "id" : "company_id";
   if (single) {
-    const { data, error } = await (supabase as any).from(table).select("*").eq("company_id", companyId).maybeSingle();
+    const { data, error } = await (supabase as any).from(table).select("*").eq(companyCol, companyId).maybeSingle();
     if (error) throw error;
     return data;
   }
@@ -40,7 +41,7 @@ async function fetchTableData(table: string, companyId: string, single: boolean 
     const { data, error } = await (supabase as any)
       .from(table)
       .select("*")
-      .eq("company_id", companyId)
+      .eq(companyCol, companyId)
       .range(from, from + pageSize - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
