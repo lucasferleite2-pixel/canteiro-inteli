@@ -89,7 +89,7 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar className="glass-sidebar bg-sidebar">
+    <Sidebar className="liquid-sidebar bg-sidebar">
       <SidebarHeader className="border-b border-sidebar-border/40 px-4 py-4">
         <div className="flex items-center gap-2">
           <HardHat className="h-7 w-7 text-primary" />
