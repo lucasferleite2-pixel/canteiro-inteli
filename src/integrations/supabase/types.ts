@@ -1046,6 +1046,73 @@ export type Database = {
           },
         ]
       }
+      rdo_import_log: {
+        Row: {
+          action: string
+          batch_id: string
+          company_id: string
+          conflicts: Json | null
+          created_at: string
+          field_changes: Json | null
+          id: string
+          merge_mode: string | null
+          obra_id: string
+          origem: string
+          rdo_dia_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          batch_id: string
+          company_id: string
+          conflicts?: Json | null
+          created_at?: string
+          field_changes?: Json | null
+          id?: string
+          merge_mode?: string | null
+          obra_id: string
+          origem?: string
+          rdo_dia_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          batch_id?: string
+          company_id?: string
+          conflicts?: Json | null
+          created_at?: string
+          field_changes?: Json | null
+          id?: string
+          merge_mode?: string | null
+          obra_id?: string
+          origem?: string
+          rdo_dia_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_import_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_import_log_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_import_log_rdo_dia_id_fkey"
+            columns: ["rdo_dia_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_dia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rdo_material: {
         Row: {
           centro_custo: string | null
