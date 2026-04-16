@@ -443,9 +443,9 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 
 function StatusBadge({ status }: { status: ImportResult["status"] }) {
   const config = {
-    created: { label: "Criado", className: "bg-green-500/10 text-green-700 border-green-500/30" },
-    overwritten: { label: "Sobrescrito", className: "bg-blue-500/10 text-blue-700 border-blue-500/30" },
-    skipped: { label: "Pulado", className: "bg-amber-500/10 text-amber-700 border-amber-500/30" },
+    created: { label: "Criado", className: "bg-primary/10 text-primary border-primary/30" },
+    overwritten: { label: "Sobrescrito", className: "bg-secondary text-secondary-foreground border-border" },
+    skipped: { label: "Pulado", className: "bg-muted text-muted-foreground border-border" },
     failed: { label: "Falha", className: "bg-destructive/10 text-destructive border-destructive/30" },
   }[status];
   return <Badge variant="outline" className={`text-[10px] ${config.className}`}>{config.label}</Badge>;
