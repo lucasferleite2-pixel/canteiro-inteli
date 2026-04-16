@@ -123,58 +123,48 @@ export async function importRdoBatch(
         rdoId = created.id;
       }
 
-      // Inserir sub-itens
-      const subItemTasks: Promise<any>[] = [];
-
+      // Inserir sub-itens (sequencialmente para tipos corretos)
       if (row.data.atividades.length > 0) {
-        subItemTasks.push(
-          supabase.from("rdo_atividade").insert(
-            row.data.atividades.map((a) => ({
-              ...a,
-              rdo_dia_id: rdoId,
-              company_id: opts.companyId,
-            }))
-          )
+        const { error } = await supabase.from("rdo_atividade").insert(
+          row.data.atividades.map((a) => ({
+            ...a,
+            rdo_dia_id: rdoId,
+            company_id: opts.companyId,
+          }))
         );
+        if (error) throw error;
       }
       if (row.data.materiais.length > 0) {
-        subItemTasks.push(
-          supabase.from("rdo_material").insert(
-            row.data.materiais.map((m) => ({
-              ...m,
-              rdo_dia_id: rdoId,
-              company_id: opts.companyId,
-            }))
-          )
+        const { error } = await supabase.from("rdo_material").insert(
+          row.data.materiais.map((m) => ({
+            ...m,
+            rdo_dia_id: rdoId,
+            company_id: opts.companyId,
+          }))
         );
+        if (error) throw error;
       }
       if (row.data.despesas.length > 0) {
-        subItemTasks.push(
-          supabase.from("rdo_despesa_item").insert(
-            row.data.despesas.map((d) => ({
-              ...d,
-              rdo_dia_id: rdoId,
-              company_id: opts.companyId,
-              created_by: opts.userId,
-            }))
-          )
+        const { error } = await supabase.from("rdo_despesa_item").insert(
+          row.data.despesas.map((d) => ({
+            ...d,
+            rdo_dia_id: rdoId,
+            company_id: opts.companyId,
+            created_by: opts.userId,
+          }))
         );
+        if (error) throw error;
       }
       if (row.data.ocorrencias.length > 0) {
-        subItemTasks.push(
-          supabase.from("rdo_ocorrencia").insert(
-            row.data.ocorrencias.map((o) => ({
-              ...o,
-              rdo_dia_id: rdoId,
-              company_id: opts.companyId,
-            }))
-          )
+        const { error } = await supabase.from("rdo_ocorrencia").insert(
+          row.data.ocorrencias.map((o) => ({
+            ...o,
+            rdo_dia_id: rdoId,
+            company_id: opts.companyId,
+          }))
         );
+        if (error) throw error;
       }
-
-      const subResults = await Promise.all(subItemTasks);
-      const subErr = subResults.find((r: any) => r?.error);
-      if (subErr?.error) throw subErr.error;
 
       results.push({
         rowNumber: row.rowNumber,
