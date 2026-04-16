@@ -388,10 +388,18 @@ export function RdoDashboard({ rdos, despesas = [], obraId, companyId, obraOrcam
         <RdoProjectionPanel obraId={obraId} companyId={companyId} rdos={rdos} />
       )}
 
-      {/* Performance by Phase */}
-      {obraId && companyId && (
-        <RdoPerformanceTab obraId={obraId} companyId={companyId} rdos={rdos} />
-      )}
+          {/* Performance by Phase */}
+          {obraId && companyId && (
+            <RdoPerformanceTab obraId={obraId} companyId={companyId} rdos={rdos} />
+          )}
+        </TabsContent>
+
+        {obraId && companyId && (
+          <TabsContent value="import" className="mt-4">
+            <RdoCsvImport obraId={obraId} companyId={companyId} />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
