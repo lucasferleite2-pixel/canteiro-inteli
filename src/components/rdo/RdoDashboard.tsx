@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RdoPerformanceTab } from "./tabs/RdoPerformanceTab";
 import { RdoProjectionPanel } from "./RdoProjectionPanel";
 import { RdoCorrectiveActionsPanel } from "./RdoCorrectiveActionsPanel";
+import { RdoCsvImport } from "./RdoCsvImport";
 import {
   TrendingUp,
   DollarSign,
@@ -174,13 +176,22 @@ export function RdoDashboard({ rdos, despesas = [], obraId, companyId, obraOrcam
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Dashboard de KPIs
-        </h2>
-        <Badge variant="secondary" className="text-xs">{stats.totalDays} dias</Badge>
-      </div>
+      <Tabs defaultValue="dashboard">
+        <TabsList>
+          <TabsTrigger value="dashboard"><BarChart3 className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
+          {obraId && companyId && (
+            <TabsTrigger value="import">📥 Importar CSV</TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="dashboard" className="space-y-4 mt-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Dashboard de KPIs
+            </h2>
+            <Badge variant="secondary" className="text-xs">{stats.totalDays} dias</Badge>
+          </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -377,10 +388,18 @@ export function RdoDashboard({ rdos, despesas = [], obraId, companyId, obraOrcam
         <RdoProjectionPanel obraId={obraId} companyId={companyId} rdos={rdos} />
       )}
 
-      {/* Performance by Phase */}
-      {obraId && companyId && (
-        <RdoPerformanceTab obraId={obraId} companyId={companyId} rdos={rdos} />
-      )}
+          {/* Performance by Phase */}
+          {obraId && companyId && (
+            <RdoPerformanceTab obraId={obraId} companyId={companyId} rdos={rdos} />
+          )}
+        </TabsContent>
+
+        {obraId && companyId && (
+          <TabsContent value="import" className="mt-4">
+            <RdoCsvImport obraId={obraId} companyId={companyId} />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
