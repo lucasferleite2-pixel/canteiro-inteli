@@ -266,9 +266,9 @@ export function RdoCsvImport({ obraId, companyId }: RdoCsvImportProps) {
           <TabsContent value="preview" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <StatCard label="Total" value={stats.total} color="text-foreground" />
-              <StatCard label="Válidas" value={stats.valid} color="text-green-600" />
+              <StatCard label="Válidas" value={stats.valid} color="text-primary" />
               <StatCard label="Com erros" value={stats.invalid} color="text-destructive" />
-              <StatCard label="Avisos" value={stats.warnings} color="text-amber-600" />
+              <StatCard label="Avisos" value={stats.warnings} color="text-muted-foreground" />
             </div>
 
             <div className="space-y-2">
@@ -312,13 +312,13 @@ export function RdoCsvImport({ obraId, companyId }: RdoCsvImportProps) {
                       row.data.despesas.length +
                       row.data.ocorrencias.length;
                     return (
-                      <TableRow key={row.rowNumber} className={hasErrors ? "bg-destructive/5" : "bg-green-500/5"}>
+                      <TableRow key={row.rowNumber} className={hasErrors ? "bg-destructive/5" : "bg-primary/5"}>
                         <TableCell className="text-xs font-mono">{row.rowNumber}</TableCell>
                         <TableCell>
                           {hasErrors ? (
                             <XCircle className="h-4 w-4 text-destructive" />
                           ) : (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
                           )}
                         </TableCell>
                         <TableCell className="text-xs">{row.data.rdo.data || "-"}</TableCell>
@@ -339,7 +339,7 @@ export function RdoCsvImport({ obraId, companyId }: RdoCsvImportProps) {
                             <div key={`e-${i}`} className="text-destructive">{e}</div>
                           ))}
                           {row.warnings.map((w, i) => (
-                            <div key={`w-${i}`} className="text-amber-600">⚠ {w}</div>
+                            <div key={`w-${i}`} className="text-muted-foreground">⚠ {w}</div>
                           ))}
                         </TableCell>
                       </TableRow>
@@ -382,9 +382,9 @@ export function RdoCsvImport({ obraId, companyId }: RdoCsvImportProps) {
               const failed = results.filter((r) => r.status === "failed").length;
               return (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <StatCard label="Criados" value={created} color="text-green-600" />
-                  <StatCard label="Sobrescritos" value={overwritten} color="text-blue-600" />
-                  <StatCard label="Pulados" value={skipped} color="text-amber-600" />
+                  <StatCard label="Criados" value={created} color="text-primary" />
+                  <StatCard label="Sobrescritos" value={overwritten} color="text-foreground" />
+                  <StatCard label="Pulados" value={skipped} color="text-muted-foreground" />
                   <StatCard label="Falhas" value={failed} color="text-destructive" />
                 </div>
               );
