@@ -22,6 +22,7 @@ import { RdoNewDayDialog } from "@/components/rdo/RdoNewDayDialog";
 import { RdoDashboard } from "@/components/rdo/RdoDashboard";
 import { DemoBanner } from "@/components/DemoBanner";
 import { NcReportDialog } from "@/components/rdo/NcReportDialog";
+import { RdoCsvImport } from "@/components/rdo/RdoCsvImport";
 
 export default function DiarioObra() {
   const { companyId, user, isDemo } = useAuth();
@@ -403,16 +404,19 @@ export default function DiarioObra() {
       ) : !isDemo && isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : filteredRdos.length === 0 && legacyEntries.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">Nenhum registro de RDO</p>
-            <p className="text-sm text-muted-foreground/70 mb-4">Crie o primeiro registro inteligente desta obra.</p>
-            <Button variant="outline" onClick={() => setShowNewRdo(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Novo RDO
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-lg font-medium text-muted-foreground">Nenhum registro de RDO</p>
+              <p className="text-sm text-muted-foreground/70 mb-4">Crie o primeiro registro inteligente desta obra ou importe via CSV.</p>
+              <Button variant="outline" onClick={() => setShowNewRdo(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Novo RDO
+              </Button>
+            </CardContent>
+          </Card>
+          {companyId && <RdoCsvImport obraId={selectedProject} companyId={companyId} />}
+        </div>
       ) : (
         <div className="space-y-4">
           {/* RDO 2.0 cards */}
