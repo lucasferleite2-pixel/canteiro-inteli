@@ -94,9 +94,9 @@ export function AppSidebar() {
         <div className="flex items-center gap-2">
           <HardHat className="h-7 w-7 text-primary" />
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground">
+            <div className="text-sm font-bold tracking-tight text-sidebar-foreground">
               ERP Obra Inteligente
-            </h1>
+            </div>
             <p className="text-[10px] text-muted-foreground">
               Gestão de Obras
             </p>
