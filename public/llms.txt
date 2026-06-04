@@ -1,0 +1,14 @@
+# Canteiro Inteli
+
+> ERP de gestão de obras para construtoras: diário de obra digital (RDO), controle financeiro, contratos, licitações e relatórios automatizados com rastreabilidade legal.
+
+Canteiro Inteli é uma plataforma SaaS multi-tenant voltada à construção civil. O sistema centraliza obras, equipes, materiais, despesas e ocorrências em RDOs digitais com hash SHA-256, audit log e portal público de verificação de documentos.
+
+## Pages
+
+- [Início](/): Visão geral da plataforma de gestão de obras.
+- [Acessar conta](/auth): Login e cadastro de novos usuários.
+
+## Optional
+
+- [Verificação de documentos](/verificar/exemplo): Portal público para validar autenticidade de RDOs e relatórios via QR Code.

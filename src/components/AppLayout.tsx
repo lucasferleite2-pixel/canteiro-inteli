@@ -22,13 +22,13 @@ export function AppLayout() {
             <SidebarTrigger />
             <div className="flex-1" />
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
                 <Bell className="h-4 w-4" />
               </Button>
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {profile?.full_name || profile?.email || ""}
               </span>
-              <Button variant="ghost" size="icon" onClick={signOut}>
+              <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sair">
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
